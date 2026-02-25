@@ -19,7 +19,7 @@ package alu_pkg;
     XOR  = 5'b00101,
     OR   = 5'b00110,
     CP   = 5'b00111,
-    // SHIFIT / ROT - (01)
+    // SHIFT / ROT - (01)
     RLC  = 5'b01000,
     RRC  = 5'b01001,
     RL   = 5'b01010,
