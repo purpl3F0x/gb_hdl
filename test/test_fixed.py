@@ -119,3 +119,170 @@ async def test_ld_a_hl_dec_ind(dut):
     actual_hl = dut.reg_file.HL_reg.value.integer
     assert actual == 0x42, f"LD A, (HL-) failed: expected A == 0x42, got {{hex(actual)}}"
     assert actual_hl == 0x7FFF, f"LD A, (HL-) failed: expected HL == 0x7FFF, got {{hex(actual_hl)}}"
+
+@cocotb.test()
+async def test_rlca_carry_0(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [0x07])
+    await reset_cpu(dut)
+    dut.reg_file.AF_reg.value = 0x8500
+    await do_cycles(dut, 1)
+    actual_a = (dut.reg_file.AF_reg.value.integer >> 8) & 0xFF
+    actual_f = (dut.reg_file.AF_reg.value.integer >> 4) & 0x0F
+    assert actual_a == 0x0B, f"RLCA failed: expected A=0x0B, got {{hex(actual_a)}}"
+    assert (actual_f & 0x1) == 0x01, f"RLCA failed: expected CY=1, got F={{hex(actual_f)}}"
+
+@cocotb.test()
+async def test_rlca_carry_1(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [0x07])
+    await reset_cpu(dut)
+    dut.reg_file.AF_reg.value = 0x4210  # carry initially set
+    await do_cycles(dut, 1)
+    actual_a = (dut.reg_file.AF_reg.value.integer >> 8) & 0xFF
+    actual_f = (dut.reg_file.AF_reg.value.integer >> 4) & 0x0F
+    assert actual_a == 0x84, f"RLCA failed: expected A=0x84, got {{hex(actual_a)}}"
+    assert (actual_f & 0x1) == 0x00, f"RLCA failed: expected CY=0, got F={{hex(actual_f)}}"
+
+@cocotb.test()
+async def test_rrca_carry_0(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [0x0F])
+    await reset_cpu(dut)
+    dut.reg_file.AF_reg.value = 0x8500
+    await do_cycles(dut, 1)
+    actual_a = (dut.reg_file.AF_reg.value.integer >> 8) & 0xFF
+    actual_f = (dut.reg_file.AF_reg.value.integer >> 4) & 0x0F
+    assert actual_a == 0xC2, f"RRCA failed: expected A=0xC2, got {{hex(actual_a)}}"
+    assert (actual_f & 0x1) == 0x01, f"RRCA failed: expected CY=1, got F={{hex(actual_f)}}"
+
+@cocotb.test()
+async def test_rrca_carry_1(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [0x0F])
+    await reset_cpu(dut)
+    dut.reg_file.AF_reg.value = 0x8410  # carry initially set
+    await do_cycles(dut, 1)
+    actual_a = (dut.reg_file.AF_reg.value.integer >> 8) & 0xFF
+    actual_f = (dut.reg_file.AF_reg.value.integer >> 4) & 0x0F
+    assert actual_a == 0x42, f"RRCA failed: expected A=0x42, got {{hex(actual_a)}}"
+    assert (actual_f & 0x1) == 0x00, f"RRCA failed: expected CY=0, got F={{hex(actual_f)}}"
+
+@cocotb.test()
+async def test_rla_carry_0(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [0x17])
+    await reset_cpu(dut)
+    dut.reg_file.AF_reg.value = 0x8500
+    await do_cycles(dut, 1)
+    actual_a = (dut.reg_file.AF_reg.value.integer >> 8) & 0xFF
+    actual_f = (dut.reg_file.AF_reg.value.integer >> 4) & 0x0F
+    assert actual_a == 0x0A, f"RLA failed: expected A=0x0A, got {{hex(actual_a)}}"
+    assert (actual_f & 0x1) == 0x01, f"RLA failed: expected CY=1, got F={{hex(actual_f)}}"
+
+@cocotb.test()
+async def test_rla_carry_1(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [0x17])
+    await reset_cpu(dut)
+    dut.reg_file.AF_reg.value = 0x8510
+    await do_cycles(dut, 1)
+    actual_a = (dut.reg_file.AF_reg.value.integer >> 8) & 0xFF
+    actual_f = (dut.reg_file.AF_reg.value.integer >> 4) & 0x0F
+    assert actual_a == 0x0B, f"RLA failed: expected A=0x0B, got {{hex(actual_a)}}"
+    assert (actual_f & 0x1) == 0x01, f"RLA failed: expected CY=1, got F={{hex(actual_f)}}"
+
+@cocotb.test()
+async def test_rra_carry_0(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [0x1F])
+    await reset_cpu(dut)
+    dut.reg_file.AF_reg.value = 0x8500
+    await do_cycles(dut, 1)
+    actual_a = (dut.reg_file.AF_reg.value.integer >> 8) & 0xFF
+    actual_f = (dut.reg_file.AF_reg.value.integer >> 4) & 0x0F
+    assert actual_a == 0x42, f"RRA failed: expected A=0x42, got {{hex(actual_a)}}"
+    assert (actual_f & 0x1) == 0x01, f"RRA failed: expected CY=1, got F={{hex(actual_f)}}"
+
+@cocotb.test()
+async def test_rra_carry_1(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [0x1F])
+    await reset_cpu(dut)
+    dut.reg_file.AF_reg.value = 0x8510
+    await do_cycles(dut, 1)
+    actual_a = (dut.reg_file.AF_reg.value.integer >> 8) & 0xFF
+    actual_f = (dut.reg_file.AF_reg.value.integer >> 4) & 0x0F
+    assert actual_a == 0xC2, f"RRA failed: expected A=0xC2, got {{hex(actual_a)}}"
+    assert (actual_f & 0x1) == 0x01, f"RRA failed: expected CY=1, got F={{hex(actual_f)}}"
+
+@cocotb.test()
+async def test_daa_1(dut):
+    # From the Game Pack Programming Manual, page 122
+    # Examples: When A = 45h and B = 38h, ADD A, B  ;  A <- 7Dh, N <- 0
+    # DAA ;  A <-7Dh + 06h (83h), CY <- 0
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [0x27])
+    await reset_cpu(dut)
+    dut.reg_file.AF_reg.value = 0x7D00
+    await do_cycles(dut, 1)
+    actual_a = (dut.reg_file.AF_reg.value.integer >> 8) & 0xFF
+    actual_f = (dut.reg_file.AF_reg.value.integer >> 4) & 0x0F
+    assert actual_a == 0x83, f"DAA 1 failed: expected A=0x83, got {{hex(actual_a)}}"
+    assert actual_f == 0x00, f"DAA 1 failed: expected F=0x00, got {{hex(actual_f)}}"
+
+@cocotb.test()
+async def test_daa_2(dut):
+    # SUB A, B  ;  A <- 83h - 38h (4Bh), N <- 1
+    # DAA ;  A <- 4Bh + FAh (45h)
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [0x27])
+    await reset_cpu(dut)
+    dut.reg_file.AF_reg.value = 0x4B60 # N (0x40) + H (0x20)
+    await do_cycles(dut, 1)
+    actual_a = (dut.reg_file.AF_reg.value.integer >> 8) & 0xFF
+    actual_f = (dut.reg_file.AF_reg.value.integer >> 4) & 0x0F
+    assert actual_a == 0x45, f"DAA 2 failed: expected A=0x45, got {{hex(actual_a)}}"
+    assert actual_f == 0x04, f"DAA 2 failed: expected F=0x04 (SUB), got {{hex(actual_f)}}"
+
+@cocotb.test()
+async def test_cpl(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [0x2F])
+    await reset_cpu(dut)
+    dut.reg_file.AF_reg.value = 0xAA00
+    await do_cycles(dut, 1)
+    actual_a = (dut.reg_file.AF_reg.value.integer >> 8) & 0xFF
+    actual_f = (dut.reg_file.AF_reg.value.integer >> 4) & 0x0F
+    assert actual_a == 0x55, f"CPL failed: expected A=0x55, got {{hex(actual_a)}}"
+    assert (actual_f & 0x6) == 0x06, f"CPL failed: expected N=1 H=1, got F={{hex(actual_f)}}"
+
+@cocotb.test()
+async def test_scf(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [0x37])
+    await reset_cpu(dut)
+    dut.reg_file.AF_reg.value = 0x0000
+    await do_cycles(dut, 1)
+    actual_f = (dut.reg_file.AF_reg.value.integer >> 4) & 0x0F
+    assert (actual_f & 0x1) == 0x01, f"SCF failed: expected CY=1, got F={{hex(actual_f)}}"
+
+@cocotb.test()
+async def test_ccf_0(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [0x3F])
+    await reset_cpu(dut)
+    dut.reg_file.AF_reg.value = 0x0010
+    await do_cycles(dut, 1)
+    actual_f = (dut.reg_file.AF_reg.value.integer >> 4) & 0x0F
+    assert (actual_f & 0x1) == 0x00, f"CCF failed: expected CY=0, got F={{hex(actual_f)}}"
+
+@cocotb.test()
+async def test_ccf_1(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [0x3F])
+    await reset_cpu(dut)
+    dut.reg_file.AF_reg.value = 0x0000
+    await do_cycles(dut, 1)
+    actual_f = (dut.reg_file.AF_reg.value.integer >> 4) & 0x0F
+    assert (actual_f & 0x1) == 0x01, f"CCF failed: expected CY=1, got F={{hex(actual_f)}}"

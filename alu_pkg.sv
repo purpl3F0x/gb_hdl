@@ -29,8 +29,12 @@ package alu_pkg;
     SWAP = 5'b01110,
     SRL  = 5'b01111,
     // SPECIAL - (10)
-    LF   = 5'b10000,  // Load Flags
-    SF   = 5'b10010,  // Save Flags
+    // LF   = 5'b10000,  // Load Flags
+    // SF   = 5'b10010,  // Save Flags
+    RLCA = 5'b10000,
+    RRCA = 5'b10001,
+    RLA  = 5'b10010,
+    RRA  = 5'b10011,
     DAA  = 5'b10100,
     CPL  = 5'b10101,
     SCF  = 5'b10110,

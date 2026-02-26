@@ -1,16 +1,16 @@
 package cpu_pkg;
   typedef enum logic [3:0] {
-    B = 4'b0000,
-    C = 4'b0001,
-    D = 4'b0010,
-    E = 4'b0011,
-    H = 4'b0100,
-    L = 4'b0101,
-    Z = 4'b0110,
-    A = 4'b0111,
+    B   = 4'b0000,
+    C   = 4'b0001,
+    D   = 4'b0010,
+    E   = 4'b0011,
+    H   = 4'b0100,
+    L   = 4'b0101,
+    Z   = 4'b0110,
+    A   = 4'b0111,
     SPH = 4'b1000,
     SPL = 4'b1001,
-    W = 4'b1010
+    W   = 4'b1010
   } register_n_t;
 
   typedef enum logic [2:0] {
@@ -30,11 +30,12 @@ package cpu_pkg;
     COPY_WZ_TO_SP = 3'b111
   } copy_wz_to_rr_op_t;
 
-  typedef enum logic [1:0] {
+  typedef enum logic [2:0] {
     IDLE,
     IF,
     WRITE,
-    READ
+    READ,
+    IF_CB
   } bus_opcode_t;
 
   typedef enum logic {

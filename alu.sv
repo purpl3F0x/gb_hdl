@@ -143,12 +143,44 @@ module ALU (
         // *     SPECIAL     * //
         // ******************* //
 
-        SF: begin
-          flags_out = B[7:4];
+        // SF: begin
+        //   flags_out = B[7:4];
+        // end
+
+        // LF: begin
+        //   res = {flags_out, 4'b0};
+        // end
+
+        RLCA: begin
+          res = {A[6:0], A[7]};
+          flags_out.C = A[7];
+          flags_out.Z = 0;
+          flags_out.N = 0;
+          flags_out.H = 0;
         end
 
-        LF: begin
-          res = {flags_out, 4'b0};
+        RRCA: begin
+          res = {A[0], A[7:1]};
+          flags_out.C = A[0];
+          flags_out.Z = 0;
+          flags_out.N = 0;
+          flags_out.H = 0;
+        end
+
+        RLA: begin
+          res = {A[6:0], flags_in.C};
+          flags_out.C = A[7];
+          flags_out.Z = 0;
+          flags_out.N = 0;
+          flags_out.H = 0;
+        end
+
+        RRA: begin
+          res = {flags_in.C, A[7:1]};
+          flags_out.C = A[0];
+          flags_out.Z = 0;
+          flags_out.N = 0;
+          flags_out.H = 0;
         end
 
         DAA: begin

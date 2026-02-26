@@ -8,6 +8,7 @@ module control (
     input rst,
 
     input [7:0] next_opcode,
+    input [7:0] cb_opcode,
 
 
     output bus_opcode_t bus_opcode_out,
@@ -227,7 +228,7 @@ module control (
       end //.
 
        // LD A, [HL+/-]
-      else if (comb_decoded_opcode[7:5] == 3'b000 && comb_decoded_opcode[3:0] == 4'b1010) begin
+      else if (comb_decoded_opcode[7:5] == 3'b001 && comb_decoded_opcode[3:0] == 4'b1010) begin
         if (m_cycle == 0) begin
           // M2: A = [HL]
           m_cycle_next = 1;
@@ -563,6 +564,27 @@ module control (
           comb_alu_op = alu_op_t'({2'b00, comb_decoded_opcode[5:3]});
           comb_alu_en = 1;
           comb_rf_flags_we = 1;
+        end
+      end //.
+
+      // RLCA, RRCA, RLA, RRA, DAA, CPL, SCF, CCF
+      else if ((comb_decoded_opcode[7:6] == 2'b00) && (comb_decoded_opcode[2:0] == 3'b111)) begin
+        comb_alu_en = 1;
+        comb_alu_op = alu_op_t'({2'b10, comb_decoded_opcode[5:3]});
+        comb_rf_read_r = (comb_decoded_opcode[4:3] < 5);  // CPL, SCF, CCF don't neet A reg;
+        comb_rf_read_reg_r = A;
+        comb_rf_write_r = (comb_decoded_opcode[4:3] < 5);  // CPL, SCF, CCF don't neet A reg;
+        comb_rf_write_reg_r = A;
+        comb_rf_flags_we = 1;
+      end //.
+
+      // CB prefix
+      else if (comb_decoded_opcode == 8'hCB) begin
+        if (m_cycle == 0) begin
+          m_cycle_next = 1;
+          comb_bus_opcode_out = IF_CB;
+        end else begin
+          // TODO
         end
       end
 

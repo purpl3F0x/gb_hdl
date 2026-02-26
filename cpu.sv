@@ -17,11 +17,7 @@ module cpu (
   reg rst_sync;  // synchronized reset for combinational logic (control unit)
 
   reg [7:0] opcode;
-  // reg [7:0] data_in_reg;
-  // reg [7:0] data_in_reg_2;
-
-  // wire data_in_reg_wr;
-  // wire data_in_reg_write_2;  // When high we will write to data_in_reg_2
+  reg [7:0] cb_opcode;
   data_out_ctrl_t data_out_ctrl;
 
   // Register File
@@ -88,6 +84,7 @@ module cpu (
       .clk(clk),
       .rst(rst_sync),
       .next_opcode(opcode),
+      .cb_opcode(cb_opcode),
       .bus_opcode_out(bus_op),
 
       .idu_op(idu_op),
@@ -152,9 +149,9 @@ module cpu (
   assign rf_data_in_r = alu_en ? alu_res : data_in;
 
   // BUS operations
-  assign rd_en = (bus_op == IF) || (bus_op == READ);
+  assign rd_en = (bus_op == IF) || (bus_op == READ) || (bus_op == IF_CB);
   assign wr_en = (bus_op == WRITE);
-  assign addr_out = (bus_op == IF || bus_op == READ || bus_op == WRITE) ? rf_data_out_rr : 16'h0;
+  assign addr_out = (bus_op == IF || bus_op == READ || bus_op == WRITE || bus_op == IF_CB) ? rf_data_out_rr : 16'h0;
   assign data_out = (bus_op == WRITE) ?
                     ((data_out_ctrl == DOUT_FROM_ALU_RES) ? alu_res : rf_data_out_r)
                     : 8'h00; // TODO: This can probably be merged to checking if ALU is enabled
@@ -164,10 +161,9 @@ module cpu (
 
   always @(posedge clk) begin
     if (rst) begin
-      counter  <= 0;
-      opcode   <= 8'h00;
-      // data_in_reg <= 0;
-      // data_in_reg_2 <= 0;
+      counter <= 0;
+      opcode <= 8'h00;
+      cb_opcode <= 8'h00;
       rst_sync <= 1;
     end else begin
       rst_sync <= 0;
@@ -182,10 +178,10 @@ module cpu (
         end
 
         READ: begin
-          // if (data_in_reg_wr) begin
-          // if (data_in_reg_write_2 == 0) data_in_reg <= data_in;
-          // else data_in_reg_2 <= data_in;
-          // end
+        end
+
+        IF_CB: begin
+          cb_opcode <= data_in[7:0];
         end
 
         default;
