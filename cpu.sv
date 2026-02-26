@@ -157,7 +157,7 @@ module cpu (
   assign addr_out = (bus_op == IF || bus_op == READ || bus_op == WRITE) ? rf_data_out_rr : 16'h0;
   assign data_out = (bus_op == WRITE) ?
                     ((data_out_ctrl == DOUT_FROM_ALU_RES) ? alu_res : rf_data_out_r)
-                    : 8'h00;
+                    : 8'h00; // TODO: This can probably be merged to checking if ALU is enabled
 
   // For metrics
   reg [47:0] counter;  // 8.5 years should be enough for tracing :)

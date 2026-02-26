@@ -66,4 +66,56 @@ async def test_ld_a_de_ind(dut):
     dut.reg_file.AF_reg.value = 0
     await do_cycles(dut, 2)
     actual = (dut.reg_file.AF_reg.value.integer >> 8) & 0xFF
-    assert actual == 0x42, f"LD A, (DE) failed: expected 0x42, got {hex(actual)}"
+    assert actual == 0x42, f"LD A, (DE) failed: expected 0x42, got {{hex(actual)}}"
+
+@cocotb.test()
+async def test_ld_hl_inc_ind_a(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [0x22])
+    await reset_cpu(dut)
+    dut.reg_file.HL_reg.value = 0x8000
+    dut.reg_file.AF_reg.value = 0x4200
+    await do_cycles(dut, 2)
+    actual = mem.data.get(0x8000, 0)
+    actual_hl = dut.reg_file.HL_reg.value.integer
+    assert actual == 0x42, f"LD (HL+), A failed: expected memory == 0x42, got {{hex(actual)}}"
+    assert actual_hl == 0x8001, f"LD (HL+), A failed: expected HL == 0x8001, got {{hex(actual_hl)}}"
+
+@cocotb.test()
+async def test_ld_hl_dec_ind_a(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [0x32])
+    await reset_cpu(dut)
+    dut.reg_file.HL_reg.value = 0x8000
+    dut.reg_file.AF_reg.value = 0x4200
+    await do_cycles(dut, 2)
+    actual = mem.data.get(0x8000, 0)
+    actual_hl = dut.reg_file.HL_reg.value.integer
+    assert actual == 0x42, f"LD (HL-), A failed: expected memory == 0x42, got {{hex(actual)}}"
+    assert actual_hl == 0x7FFF, f"LD (HL-), A failed: expected HL == 0x7FFF, got {{hex(actual_hl)}}"
+
+@cocotb.test()
+async def test_ld_a_hl_inc_ind(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [0x2A], data={0x8000: 0x42})
+    await reset_cpu(dut)
+    dut.reg_file.HL_reg.value = 0x8000
+    dut.reg_file.AF_reg.value = 0
+    await do_cycles(dut, 2)
+    actual = (dut.reg_file.AF_reg.value.integer >> 8) & 0xFF
+    actual_hl = dut.reg_file.HL_reg.value.integer
+    assert actual == 0x42, f"LD A, (HL+) failed: expected A == 0x42, got {{hex(actual)}}"
+    assert actual_hl == 0x8001, f"LD A, (HL+) failed: expected HL == 0x8001, got {{hex(actual_hl)}}"
+
+@cocotb.test()
+async def test_ld_a_hl_dec_ind(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [0x3A], data={0x8000: 0x42})
+    await reset_cpu(dut)
+    dut.reg_file.HL_reg.value = 0x8000
+    dut.reg_file.AF_reg.value = 0
+    await do_cycles(dut, 2)
+    actual = (dut.reg_file.AF_reg.value.integer >> 8) & 0xFF
+    actual_hl = dut.reg_file.HL_reg.value.integer
+    assert actual == 0x42, f"LD A, (HL-) failed: expected A == 0x42, got {{hex(actual)}}"
+    assert actual_hl == 0x7FFF, f"LD A, (HL-) failed: expected HL == 0x7FFF, got {{hex(actual_hl)}}"
