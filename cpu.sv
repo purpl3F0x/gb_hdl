@@ -17,8 +17,11 @@ module cpu (
   reg rst_sync;  // synchronized reset for combinational logic (control unit)
 
   reg [7:0] opcode;
-  reg [7:0] data_in_reg;
-  wire data_in_reg_wr;
+  // reg [7:0] data_in_reg;
+  // reg [7:0] data_in_reg_2;
+
+  // wire data_in_reg_wr;
+  // wire data_in_reg_write_2;  // When high we will write to data_in_reg_2
   data_out_ctrl_t data_out_ctrl;
 
   // Register File
@@ -30,8 +33,12 @@ module cpu (
   register_n_t rf_read_reg_r, rf_write_reg_r;
   register_nn_t rf_read_reg_rr, rf_write_reg_rr;
   flags_t rf_flag_mask_n, rf_flags_in;
+  // Internal 16-bit copy control
+  copy_wz_to_rr_op_t rf_copy_wz_to_rr_op;
   // Bus opcode coming from `control`
   bus_opcode_t bus_op;
+
+
 
   register_file reg_file (
       .clk(clk),
@@ -51,20 +58,23 @@ module cpu (
       .write_rr(rf_write_rr),
       .write_reg_rr(rf_write_reg_rr),
       .data_in_rr(rf_data_in_rr),
+      .copy_wz_to_rr_op(rf_copy_wz_to_rr_op),
       .A_out(rf_A),
       .flags_out(rf_flags_out)
   );
 
-  wire [7:0] idu_data_in;
-  wire [7:0] idu_data_out;
   wire idu_op, idu_en;
+  wire [15:0] idu_dout;
 
   idu idu_unit (
       .en(idu_en),
       .op(idu_op),
       .data_in(rf_data_out_rr),
-      .data_out(rf_data_in_rr)
+      .data_out(idu_dout)
   );
+
+  assign rf_data_in_rr = idu_dout;
+
 
   wire alu_en;
   alu_op_t alu_op;
@@ -92,6 +102,7 @@ module cpu (
       .rf_read_rr(rf_read_rr),
       .rf_write_reg_rr(rf_write_reg_rr),
       .rf_write_rr(rf_write_rr),
+      .rf_copy_wz_to_rr_op(rf_copy_wz_to_rr_op),
       .rf_flags_we(rf_flags_we),
       .rf_flag_mask_n(rf_flag_mask_n),
 
@@ -101,8 +112,7 @@ module cpu (
       .alu_src_a_select(alu_src_a_select),
       .alu_src_b_select(alu_src_b_select),
 
-      .data_in_reg_wr(data_in_reg_wr),
-      .data_out_ctrl (data_out_ctrl)
+      .data_out_ctrl(data_out_ctrl)
   );
 
 
@@ -113,13 +123,13 @@ module cpu (
     case (alu_src_a_select)
       ALU_SRC_A_A:   alu_A = rf_A;
       ALU_SRC_A_REG: alu_A = rf_data_out_r;
-      ALU_SRC_A_TMP: alu_A = data_in_reg;
+      // ALU_SRC_A_TMP: alu_A = data_in_reg;
       default;
     endcase
 
     case (alu_src_b_select)
       ALU_SRC_B_REG:  alu_B = rf_data_out_r;
-      ALU_SRC_B_TMP:  alu_B = data_in_reg;
+      // ALU_SRC_B_TMP:  alu_B = data_in_reg;
       ALU_SRC_B_ZERO: alu_B = 8'h00;
       ALU_SRC_B_ONE:  alu_B = 8'h01;
       default;
@@ -139,14 +149,14 @@ module cpu (
       .res(alu_res)
   );
   // Might not be always correct
-  assign rf_data_in_r = alu_en ? alu_res : idu_data_out;
+  assign rf_data_in_r = alu_en ? alu_res : data_in;
 
   // BUS operations
   assign rd_en = (bus_op == IF) || (bus_op == READ);
   assign wr_en = (bus_op == WRITE);
   assign addr_out = (bus_op == IF || bus_op == READ || bus_op == WRITE) ? rf_data_out_rr : 16'h0;
   assign data_out = (bus_op == WRITE) ?
-                    (data_out_ctrl == DOUT_FROM_ALU_RES ? alu_res : rf_data_out_r)
+                    ((data_out_ctrl == DOUT_FROM_ALU_RES) ? alu_res : rf_data_out_r)
                     : 8'h00;
 
   // For metrics
@@ -154,9 +164,10 @@ module cpu (
 
   always @(posedge clk) begin
     if (rst) begin
-      counter <= 0;
-      opcode <= 8'h00;
-      data_in_reg <= 0;
+      counter  <= 0;
+      opcode   <= 8'h00;
+      // data_in_reg <= 0;
+      // data_in_reg_2 <= 0;
       rst_sync <= 1;
     end else begin
       rst_sync <= 0;
@@ -171,7 +182,10 @@ module cpu (
         end
 
         READ: begin
-          if (data_in_reg_wr) data_in_reg <= data_in;
+          // if (data_in_reg_wr) begin
+          // if (data_in_reg_write_2 == 0) data_in_reg <= data_in;
+          // else data_in_reg_2 <= data_in;
+          // end
         end
 
         default;

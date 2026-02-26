@@ -16,7 +16,7 @@ module register_file (
     output logic [15:0] data_out_rr,
 
     input flags_we,
-    input flags_t flag_mask_n, // Active low mask for flags write enable
+    input flags_t flag_mask_n,  // Active low mask for flags write enable
     input flags_t flags_in,
 
     input write_r,
@@ -26,6 +26,8 @@ module register_file (
     input write_rr,
     input register_nn_t write_reg_rr,
     input [15:0] data_in_rr,
+
+    input copy_wz_to_rr_op_t copy_wz_to_rr_op,  // Will copy WZ to the specified register if active
 
     output [7:0] A_out,
     output flags_t flags_out
@@ -37,6 +39,9 @@ module register_file (
   logic [15:0] SP_reg;
   logic [15:0] PC_reg;
 
+  logic [15:0] WZ_reg;  // temp register
+
+
   assign A_out = AF_reg[15:8];
 
   assign flags_out = AF_reg[7:4];
@@ -46,13 +51,16 @@ module register_file (
     if (read_r) begin
       case (read_reg_r)
         A: data_out_r = AF_reg[15:8];
-        F: data_out_r = AF_reg[7:0];
+        Z: data_out_r = WZ_reg[7:0];
         B: data_out_r = BC_reg[15:8];
         C: data_out_r = BC_reg[7:0];
         D: data_out_r = DE_reg[15:8];
         E: data_out_r = DE_reg[7:0];
         H: data_out_r = HL_reg[15:8];
         L: data_out_r = HL_reg[7:0];
+        SPH: data_out_r = SP_reg[15:8];
+        SPL: data_out_r = SP_reg[7:0];
+        W: data_out_r = SP_reg[15:8];
         default: data_out_r = 8'h00;
       endcase
     end else begin
@@ -67,6 +75,7 @@ module register_file (
         HL: data_out_rr = HL_reg;
         SP: data_out_rr = SP_reg;
         PC: data_out_rr = PC_reg;
+        WZ: data_out_rr = WZ_reg;
         default: data_out_rr = 16'h0000;
       endcase
     end else begin
@@ -75,7 +84,18 @@ module register_file (
 
   end
 
-
+  //  16-bit register copy (with some heave sanity checks)
+  always @(posedge clk) begin
+    if ((rst == 0) && (write_reg_rr == PC || write_reg_r == 0)) begin
+      case (copy_wz_to_rr_op)
+        COPY_WZ_TO_BC: BC_reg <= WZ_reg;
+        COPY_WZ_TO_DE: DE_reg <= WZ_reg;
+        COPY_WZ_TO_HL: HL_reg <= WZ_reg;
+        COPY_WZ_TO_SP: SP_reg <= WZ_reg;
+        default: ;
+      endcase
+    end
+  end
 
   always @(posedge clk) begin
     if (rst) begin
@@ -85,19 +105,22 @@ module register_file (
       HL_reg <= 16'h0000;
       SP_reg <= 16'h0000;
       PC_reg <= 16'h0000;
+      WZ_reg <= 16'h0000;
 
     end else begin
-
       if (write_r) begin
         case (write_reg_r)
           A: AF_reg[15:8] <= data_in_r;
-          F: AF_reg[7:4] <= data_in_r[7:4];
+          Z: WZ_reg[7:0] <= data_in_r;
           B: BC_reg[15:8] <= data_in_r;
           C: BC_reg[7:0] <= data_in_r;
           D: DE_reg[15:8] <= data_in_r;
           E: DE_reg[7:0] <= data_in_r;
           H: HL_reg[15:8] <= data_in_r;
           L: HL_reg[7:0] <= data_in_r;
+          SPH: SP_reg[15:8] <= data_in_r;
+          SPL: SP_reg[7:0] <= data_in_r;
+          W: WZ_reg[15:8] <= data_in_r;
           default: ;
         endcase
       end
@@ -113,6 +136,7 @@ module register_file (
           HL: HL_reg <= data_in_rr;
           SP: SP_reg <= data_in_rr;
           PC: PC_reg <= data_in_rr;
+          WZ: WZ_reg <= data_in_rr;
           default: ;
         endcase
       end
