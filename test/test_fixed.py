@@ -755,3 +755,71 @@ async def test_ld_a_ind_a16(dut):
 
     actual_a = (dut.reg_file.AF_reg.value.integer >> 8) & 0xFF
     assert actual_a == 0x3C, f"LD A,[a16] failed: expected A=0x3C, got {hex(actual_a)}"
+
+
+async def _run_rst_vector_case(dut, opcode: int, expected_vector: int):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [opcode, 0x00])
+    await reset_cpu(dut)
+
+    dut.reg_file.SP_reg.value = 0xBFFE
+
+    await do_cycles(dut, 3)  # 4 cycles but check before IF
+
+    actual_pc = dut.reg_file.PC_reg.value.integer
+    actual_sp = dut.reg_file.SP_reg.value.integer
+    stacked_pcl = mem.data.get(0xBFFC, 0)
+    stacked_pch = mem.data.get(0xBFFD, 0)
+
+    assert (
+        actual_pc == expected_vector
+    ), f"RST failed for opcode {hex(opcode)}: expected PC={hex(expected_vector)}, got {hex(actual_pc)}"
+    assert (
+        actual_sp == 0xBFFC
+    ), f"RST failed for opcode {hex(opcode)}: expected SP=0xBFFC, got {hex(actual_sp)}"
+    assert (
+        stacked_pcl == 0x01
+    ), f"RST failed for opcode {hex(opcode)}: expected stacked PCL=0x01, got {hex(stacked_pcl)}"
+    assert (
+        stacked_pch == 0x00
+    ), f"RST failed for opcode {hex(opcode)}: expected stacked PCH=0x00, got {hex(stacked_pch)}"
+
+
+@cocotb.test()
+async def test_rst_00(dut):
+    await _run_rst_vector_case(dut, 0xC7, 0x00)
+
+
+@cocotb.test()
+async def test_rst_08(dut):
+    await _run_rst_vector_case(dut, 0xCF, 0x08)
+
+
+@cocotb.test()
+async def test_rst_10(dut):
+    await _run_rst_vector_case(dut, 0xD7, 0x10)
+
+
+@cocotb.test()
+async def test_rst_18(dut):
+    await _run_rst_vector_case(dut, 0xDF, 0x18)
+
+
+@cocotb.test()
+async def test_rst_20(dut):
+    await _run_rst_vector_case(dut, 0xE7, 0x20)
+
+
+@cocotb.test()
+async def test_rst_28(dut):
+    await _run_rst_vector_case(dut, 0xEF, 0x28)
+
+
+@cocotb.test()
+async def test_rst_30(dut):
+    await _run_rst_vector_case(dut, 0xF7, 0x30)
+
+
+@cocotb.test()
+async def test_rst_38(dut):
+    await _run_rst_vector_case(dut, 0xFF, 0x38)

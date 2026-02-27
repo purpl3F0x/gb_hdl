@@ -29,6 +29,7 @@ module control (
     output register_nn_t rf_write_reg_rr,
     output reg rf_write_rr,
     output copy_wz_to_rr_op_t rf_copy_wz_to_rr_op,
+    output reg rf_pc_rst,
     // For flags register writes
     output reg rf_flags_we,
     output flags_t rf_flag_mask_n,
@@ -62,6 +63,7 @@ module control (
   reg comb_rf_write_rr;
   register_nn_t comb_rf_write_reg_rr;
   copy_wz_to_rr_op_t comb_rf_copy_wz_to_rr_op;
+  reg comb_rf_pc_rst;
   reg comb_rf_flags_we;
   flags_t comb_rf_flag_mask_n;
 
@@ -88,6 +90,7 @@ module control (
     comb_rf_write_rr = 0;
     comb_rf_write_reg_rr = BC;
     comb_rf_copy_wz_to_rr_op = NO_COPY;
+    comb_rf_pc_rst = 0;
     comb_rf_flags_we = 0;
     comb_rf_flag_mask_n = 4'b0000;
 
@@ -712,6 +715,56 @@ module control (
         end
       end  //.
 
+      // RST n
+      else if (comb_decoded_opcode[7:6] == 2'b11 && comb_decoded_opcode[2:0] == 3'b111) begin
+        if (m_cycle == 0) begin
+          // M2: SP = SP -1
+          m_cycle_next = 1;
+          comb_idu_en = 1;
+          comb_idu_op = 1;
+          comb_rf_read_rr = 1;
+          comb_rf_read_reg_rr = SP;
+          comb_rf_write_rr = 1;
+          comb_rf_write_reg_rr = SP;
+          comb_bus_opcode_out = IDLE;
+        end else if (m_cycle == 1) begin
+          // M3: [SP] = PCH, SP = SP - 1
+          m_cycle_next = 2;
+          // [SP] = PCH
+          comb_bus_opcode_out = WRITE;
+          comb_rf_read_rr = 1;
+          comb_rf_read_reg_rr = SP;
+          comb_rf_read_r = 1;
+          comb_rf_read_reg_r = PCH;
+          comb_data_out_ctrl = DOUT_FROM_REG_FILE;
+          // SP = SP - 1
+          comb_idu_en = 1;
+          comb_idu_op = 1;
+          comb_rf_read_rr = 1;
+          comb_rf_read_reg_rr = SP;
+          comb_rf_write_rr = 1;
+          comb_rf_write_reg_rr = SP;
+        end else if (m_cycle == 2) begin
+          // M4: [SP] = PCL, PC = n
+          m_cycle_next = 3;
+          comb_bus_opcode_out = WRITE;
+          comb_rf_read_rr = 1;
+          comb_rf_read_reg_rr = SP;
+          // Don't write SP, disable IDU
+          comb_rf_write_rr = 0;
+          comb_idu_en = 0;
+          comb_rf_read_r = 1;
+          comb_rf_read_reg_r = PCL;
+          comb_data_out_ctrl = DOUT_FROM_REG_FILE;
+          // PC = n
+          comb_rf_pc_rst = 1;
+          comb_idu_en = 0;
+        end else begin
+          // M5/M1: IF
+          m_cycle_next = 0;
+        end
+      end //.
+
       // LDH [a8], A
       else if (comb_decoded_opcode == 8'hE0) begin
         if (m_cycle == 0) begin
@@ -936,6 +989,7 @@ module control (
     rf_write_rr <= comb_rf_write_rr;
     rf_write_reg_rr <= comb_rf_write_reg_rr;
     rf_copy_wz_to_rr_op <= comb_rf_copy_wz_to_rr_op;
+    rf_pc_rst <= comb_rf_pc_rst;
     rf_flags_we <= comb_rf_flags_we;
     rf_flag_mask_n <= comb_rf_flag_mask_n;
 

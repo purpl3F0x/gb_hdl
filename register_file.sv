@@ -28,6 +28,8 @@ module register_file (
     input [15:0] data_in_rr,
 
     input copy_wz_to_rr_op_t copy_wz_to_rr_op,  // Will copy WZ to the specified register if active
+    input pc_rst,
+    input [2:0] pc_rst_vector,
 
     output [7:0] A_out,
     output [7:0] H_out,
@@ -54,18 +56,21 @@ module register_file (
     // Read single 8-bit register
     if (read_r) begin
       case (read_reg_r)
-        A: data_out_r = AF_reg[15:8];
-        Z: data_out_r = WZ_reg[7:0];
-        B: data_out_r = BC_reg[15:8];
-        C: data_out_r = BC_reg[7:0];
-        D: data_out_r = DE_reg[15:8];
-        E: data_out_r = DE_reg[7:0];
-        H: data_out_r = HL_reg[15:8];
-        L: data_out_r = HL_reg[7:0];
+        A:   data_out_r = AF_reg[15:8];
+        Z:   data_out_r = WZ_reg[7:0];
+        B:   data_out_r = BC_reg[15:8];
+        C:   data_out_r = BC_reg[7:0];
+        D:   data_out_r = DE_reg[15:8];
+        E:   data_out_r = DE_reg[7:0];
+        H:   data_out_r = HL_reg[15:8];
+        L:   data_out_r = HL_reg[7:0];
         SPH: data_out_r = SP_reg[15:8];
         SPL: data_out_r = SP_reg[7:0];
-        W: data_out_r = SP_reg[15:8];
-        F: data_out_r = AF_reg[7:0];
+        W:   data_out_r = WZ_reg[15:8];
+        F:   data_out_r = AF_reg[7:0];
+        PCH: data_out_r = PC_reg[15:8];
+        PCL: data_out_r = PC_reg[7:0];
+
         default: data_out_r = 8'h00;
       endcase
     end else begin
@@ -105,6 +110,13 @@ module register_file (
     end
   end
 
+  // PC RST
+  always @(posedge clk) begin
+    if ((rst == 0) && pc_rst) begin
+      PC_reg <= {8'h00, 2'b00, pc_rst_vector, 3'b0};
+    end
+  end
+
   always @(posedge clk) begin
     if (rst) begin
       AF_reg <= 16'h0000;
@@ -130,6 +142,8 @@ module register_file (
           SPL: SP_reg[7:0] <= data_in_r;
           W: WZ_reg[15:8] <= data_in_r;
           F: AF_reg[7:0] <= data_in_r;
+          PCH: PC_reg[15:8] <= data_in_r;
+          PCL: PC_reg[7:0] <= data_in_r;
           default: ;
         endcase
       end

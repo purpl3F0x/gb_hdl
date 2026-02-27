@@ -11,7 +11,9 @@ package cpu_pkg;
     SPH = 4'b1000,
     SPL = 4'b1001,
     W   = 4'b1010,
-    F   = 4'b1011
+    F   = 4'b1011,
+    PCH = 4'b1100,
+    PCL = 4'b1101
   } register_n_t;
 
   typedef enum logic [2:0] {

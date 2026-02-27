@@ -31,9 +31,13 @@ module cpu (
   flags_t rf_flag_mask_n, rf_flags_in;
   // Internal 16-bit copy control
   copy_wz_to_rr_op_t rf_copy_wz_to_rr_op;
+  // PC reset control
+  wire rf_pc_rst;
+  wire [2:0] rf_pc_rst_vector;
   // Bus opcode coming from `control`
   bus_opcode_t bus_op;
 
+  assign rf_pc_rst_vector = opcode[5:3];
 
 
   register_file reg_file (
@@ -55,6 +59,8 @@ module cpu (
       .write_reg_rr(rf_write_reg_rr),
       .data_in_rr(rf_data_in_rr),
       .copy_wz_to_rr_op(rf_copy_wz_to_rr_op),
+      .pc_rst(rf_pc_rst),
+      .pc_rst_vector(rf_pc_rst_vector),
       .A_out(rf_A),
       .H_out(rf_H),
       .L_out(rf_L),
@@ -102,6 +108,7 @@ module cpu (
       .rf_write_reg_rr(rf_write_reg_rr),
       .rf_write_rr(rf_write_rr),
       .rf_copy_wz_to_rr_op(rf_copy_wz_to_rr_op),
+      .rf_pc_rst(rf_pc_rst),
       .rf_flags_we(rf_flags_we),
       .rf_flag_mask_n(rf_flag_mask_n),
 
@@ -128,8 +135,8 @@ module cpu (
     endcase
 
     case (alu_src_b_select)
-      ALU_SRC_B_REG:  alu_B = rf_data_out_r;
-      ALU_SRC_B_ONE:  alu_B = 8'h01;
+      ALU_SRC_B_REG: alu_B = rf_data_out_r;
+      ALU_SRC_B_ONE: alu_B = 8'h01;
       default;
     endcase
 
