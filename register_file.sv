@@ -30,6 +30,8 @@ module register_file (
     input copy_wz_to_rr_op_t copy_wz_to_rr_op,  // Will copy WZ to the specified register if active
 
     output [7:0] A_out,
+    output [7:0] H_out,
+    output [7:0] L_out,
     output flags_t flags_out
 );
   logic [15:0] AF_reg;
@@ -43,6 +45,8 @@ module register_file (
 
 
   assign A_out = AF_reg[15:8];
+  assign H_out = HL_reg[15:8];
+  assign L_out = HL_reg[7:0];
 
   assign flags_out = AF_reg[7:4];
 
@@ -61,6 +65,7 @@ module register_file (
         SPH: data_out_r = SP_reg[15:8];
         SPL: data_out_r = SP_reg[7:0];
         W: data_out_r = SP_reg[15:8];
+        F: data_out_r = AF_reg[7:0];
         default: data_out_r = 8'h00;
       endcase
     end else begin
@@ -76,6 +81,8 @@ module register_file (
         SP: data_out_rr = SP_reg;
         PC: data_out_rr = PC_reg;
         WZ: data_out_rr = WZ_reg;
+        LDH_Z: data_out_rr = {8'hFF, WZ_reg[7:0]};
+        LDH_C: data_out_rr = {8'hFF, BC_reg[7:0]};
         default: data_out_rr = 16'h0000;
       endcase
     end else begin
@@ -92,6 +99,7 @@ module register_file (
         COPY_WZ_TO_DE: DE_reg <= WZ_reg;
         COPY_WZ_TO_HL: HL_reg <= WZ_reg;
         COPY_WZ_TO_SP: SP_reg <= WZ_reg;
+        COPY_WZ_TO_AF: AF_reg[15:4] <= WZ_reg[15:4];
         default: ;
       endcase
     end
@@ -121,6 +129,7 @@ module register_file (
           SPH: SP_reg[15:8] <= data_in_r;
           SPL: SP_reg[7:0] <= data_in_r;
           W: WZ_reg[15:8] <= data_in_r;
+          F: AF_reg[7:0] <= data_in_r;
           default: ;
         endcase
       end

@@ -23,7 +23,7 @@ module cpu (
   // Register File
   logic [7:0] rf_data_out_r, rf_data_in_r;
   logic [15:0] rf_data_out_rr, rf_data_in_rr;
-  logic [7:0] rf_A;
+  logic [7:0] rf_A, rf_H, rf_L;
   flags_t rf_flags_out;
   logic rf_read_r, rf_read_rr, rf_write_r, rf_write_rr, rf_flags_we;
   register_n_t rf_read_reg_r, rf_write_reg_r;
@@ -56,6 +56,8 @@ module cpu (
       .data_in_rr(rf_data_in_rr),
       .copy_wz_to_rr_op(rf_copy_wz_to_rr_op),
       .A_out(rf_A),
+      .H_out(rf_H),
+      .L_out(rf_L),
       .flags_out(rf_flags_out)
   );
 
@@ -120,13 +122,13 @@ module cpu (
     case (alu_src_a_select)
       ALU_SRC_A_A:   alu_A = rf_A;
       ALU_SRC_A_REG: alu_A = rf_data_out_r;
-      // ALU_SRC_A_TMP: alu_A = data_in_reg;
+      ALU_SRC_A_L:   alu_A = rf_L;
+      ALU_SRC_A_H:   alu_A = rf_H;
       default;
     endcase
 
     case (alu_src_b_select)
       ALU_SRC_B_REG:  alu_B = rf_data_out_r;
-      // ALU_SRC_B_TMP:  alu_B = data_in_reg;
       ALU_SRC_B_ZERO: alu_B = 8'h00;
       ALU_SRC_B_ONE:  alu_B = 8'h01;
       default;

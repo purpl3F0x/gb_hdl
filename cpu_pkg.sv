@@ -10,7 +10,8 @@ package cpu_pkg;
     A   = 4'b0111,
     SPH = 4'b1000,
     SPL = 4'b1001,
-    W   = 4'b1010
+    W   = 4'b1010,
+    F   = 4'b1011
   } register_n_t;
 
   typedef enum logic [2:0] {
@@ -19,15 +20,18 @@ package cpu_pkg;
     HL = 3'b010,
     SP = 3'b011,
     PC = 3'b100,
-    WZ = 3'b101
+    WZ = 3'b101,
+    LDH_Z = 3'b110,  // (0xFF00 + Z)
+    LDH_C = 3'b111  // (0xFF00 + C)
   } register_nn_t;
 
-  typedef enum logic [2:0] {
+  typedef enum logic [2:0] {  // TODO: this needs to be sperated with enable signal
     NO_COPY = 3'b000,
     COPY_WZ_TO_BC = 3'b100,
     COPY_WZ_TO_DE = 3'b101,
     COPY_WZ_TO_HL = 3'b110,
-    COPY_WZ_TO_SP = 3'b111
+    COPY_WZ_TO_SP = 3'b111,
+    COPY_WZ_TO_AF = 3'b001
   } copy_wz_to_rr_op_t;
 
   typedef enum logic [2:0] {
@@ -46,12 +50,12 @@ package cpu_pkg;
   typedef enum logic [1:0] {
     ALU_SRC_A_A,
     ALU_SRC_A_REG,
-    ALU_SRC_A_TMP
+    ALU_SRC_A_L,
+    ALU_SRC_A_H
   } alu_src_a_select_t;
 
   typedef enum logic [1:0] {
     ALU_SRC_B_REG,
-    ALU_SRC_B_TMP,
     ALU_SRC_B_ZERO,
     ALU_SRC_B_ONE
   } alu_src_b_select_t;
