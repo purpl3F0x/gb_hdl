@@ -45,6 +45,14 @@ module register_file (
 
   logic [15:0] WZ_reg;  // temp register
 
+  logic [15:0] AF_next;
+  logic [15:0] BC_next;
+  logic [15:0] DE_next;
+  logic [15:0] HL_next;
+  logic [15:0] SP_next;
+  logic [15:0] PC_next;
+  logic [15:0] WZ_next;
+
 
   assign A_out = AF_reg[15:8];
   assign H_out = HL_reg[15:8];
@@ -96,28 +104,68 @@ module register_file (
 
   end
 
-  //  16-bit register copy (with some heave sanity checks)
-  always @(posedge clk) begin
-    if ((rst == 0) && (write_reg_rr == PC || write_reg_r == 0)) begin
-      case (copy_wz_to_rr_op)
-        COPY_WZ_TO_BC: BC_reg <= WZ_reg;
-        COPY_WZ_TO_DE: DE_reg <= WZ_reg;
-        COPY_WZ_TO_HL: HL_reg <= WZ_reg;
-        COPY_WZ_TO_SP: SP_reg <= WZ_reg;
-        COPY_WZ_TO_AF: AF_reg[15:4] <= WZ_reg[15:4];
+  always_comb begin
+    AF_next = AF_reg;
+    BC_next = BC_reg;
+    DE_next = DE_reg;
+    HL_next = HL_reg;
+    SP_next = SP_reg;
+    PC_next = PC_reg;
+    WZ_next = WZ_reg;
+
+    if (write_r) begin
+      case (write_reg_r)
+        A: AF_next[15:8] = data_in_r;
+        Z: WZ_next[7:0] = data_in_r;
+        B: BC_next[15:8] = data_in_r;
+        C: BC_next[7:0] = data_in_r;
+        D: DE_next[15:8] = data_in_r;
+        E: DE_next[7:0] = data_in_r;
+        H: HL_next[15:8] = data_in_r;
+        L: HL_next[7:0] = data_in_r;
+        SPH: SP_next[15:8] = data_in_r;
+        SPL: SP_next[7:0] = data_in_r;
+        W: WZ_next[15:8] = data_in_r;
+        F: AF_next[7:0] = data_in_r;
+        PCH: PC_next[15:8] = data_in_r;
+        PCL: PC_next[7:0] = data_in_r;
         default: ;
       endcase
     end
-  end
 
-  // PC RST
-  always @(posedge clk) begin
-    if ((rst == 0) && pc_rst) begin
-      PC_reg <= {8'h00, 2'b00, pc_rst_vector, 3'b0};
+    if (flags_we) begin
+      AF_next[7:4] = (AF_next[7:4] & flag_mask_n) | (flags_in & ~flag_mask_n);
+    end
+
+    if (write_rr) begin
+      case (write_reg_rr)
+        BC: BC_next = data_in_rr;
+        DE: DE_next = data_in_rr;
+        HL: HL_next = data_in_rr;
+        SP: SP_next = data_in_rr;
+        PC: PC_next = data_in_rr;
+        WZ: WZ_next = data_in_rr;
+        default: ;
+      endcase
+    end
+
+    if (write_reg_rr == PC || write_reg_r == 0) begin
+      case (copy_wz_to_rr_op)
+        COPY_WZ_TO_BC: BC_next = WZ_next;
+        COPY_WZ_TO_DE: DE_next = WZ_next;
+        COPY_WZ_TO_HL: HL_next = WZ_next;
+        COPY_WZ_TO_SP: SP_next = WZ_next;
+        COPY_WZ_TO_AF: AF_next[15:4] = WZ_next[15:4];
+        default: ;
+      endcase
+    end
+
+    if (pc_rst) begin
+      PC_next = {8'h00, 2'b00, pc_rst_vector, 3'b0};
     end
   end
 
-  always @(posedge clk) begin
+  always_ff @(posedge clk) begin
     if (rst) begin
       AF_reg <= 16'h0000;
       BC_reg <= 16'h0000;
@@ -126,43 +174,14 @@ module register_file (
       SP_reg <= 16'h0000;
       PC_reg <= 16'h0000;
       WZ_reg <= 16'h0000;
-
     end else begin
-      if (write_r) begin
-        case (write_reg_r)
-          A: AF_reg[15:8] <= data_in_r;
-          Z: WZ_reg[7:0] <= data_in_r;
-          B: BC_reg[15:8] <= data_in_r;
-          C: BC_reg[7:0] <= data_in_r;
-          D: DE_reg[15:8] <= data_in_r;
-          E: DE_reg[7:0] <= data_in_r;
-          H: HL_reg[15:8] <= data_in_r;
-          L: HL_reg[7:0] <= data_in_r;
-          SPH: SP_reg[15:8] <= data_in_r;
-          SPL: SP_reg[7:0] <= data_in_r;
-          W: WZ_reg[15:8] <= data_in_r;
-          F: AF_reg[7:0] <= data_in_r;
-          PCH: PC_reg[15:8] <= data_in_r;
-          PCL: PC_reg[7:0] <= data_in_r;
-          default: ;
-        endcase
-      end
-
-      if (flags_we) begin
-        AF_reg[7:4] <= (AF_reg[7:4] & flag_mask_n) | (flags_in & ~flag_mask_n);
-      end
-
-      if (write_rr) begin
-        case (write_reg_rr)
-          BC: BC_reg <= data_in_rr;
-          DE: DE_reg <= data_in_rr;
-          HL: HL_reg <= data_in_rr;
-          SP: SP_reg <= data_in_rr;
-          PC: PC_reg <= data_in_rr;
-          WZ: WZ_reg <= data_in_rr;
-          default: ;
-        endcase
-      end
+      AF_reg <= AF_next;
+      BC_reg <= BC_next;
+      DE_reg <= DE_next;
+      HL_reg <= HL_next;
+      SP_reg <= SP_next;
+      PC_reg <= PC_next;
+      WZ_reg <= WZ_next;
     end
   end
 
