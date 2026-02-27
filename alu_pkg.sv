@@ -29,8 +29,6 @@ package alu_pkg;
     SWAP = 5'b01110,
     SRL  = 5'b01111,
     // SPECIAL - (10)
-    // LF   = 5'b10000,  // Load Flags
-    // SF   = 5'b10010,  // Save Flags
     RLCA = 5'b10000,
     RRCA = 5'b10001,
     RLA  = 5'b10010,
@@ -39,7 +37,8 @@ package alu_pkg;
     CPL  = 5'b10101,
     SCF  = 5'b10110,
     CCF  = 5'b10111,
-    // BIT OPS - (11)
+    // BIT OPS, PASS - (11)
+    PASS = 5'b11000,
     BIT  = 5'b11101,
     RES  = 5'b11110,
     SET  = 5'b11111

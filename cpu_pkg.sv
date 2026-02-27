@@ -56,7 +56,6 @@ package cpu_pkg;
 
   typedef enum logic [1:0] {
     ALU_SRC_B_REG,
-    ALU_SRC_B_ZERO,
     ALU_SRC_B_ONE
   } alu_src_b_select_t;
 

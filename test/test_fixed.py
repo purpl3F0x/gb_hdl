@@ -150,6 +150,18 @@ async def test_ld_a_hl_dec_ind(dut):
 
 
 @cocotb.test()
+async def test_ld_sp_hl(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [0xF9])
+    await reset_cpu(dut)
+    dut.reg_file.HL_reg.value = 0xBEEF
+    dut.reg_file.SP_reg.value = 0x0000
+    await do_cycles(dut, 2)
+    actual = dut.reg_file.SP_reg.value.integer
+    assert actual == 0xBEEF, f"LD SP, HL failed: expected 0xBEEF, got {hex(actual)}"
+
+
+@cocotb.test()
 async def test_rlca_carry_0(dut):
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     mem = CPUMemory(dut, [0x07])
