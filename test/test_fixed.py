@@ -629,8 +629,12 @@ async def test_push_then_pop_roundtrip_bc_to_de(dut):
     low_mid = mem.data.get(0xC1FE, 0)
     high_mid = mem.data.get(0xC1FF, 0)
     assert sp_mid == 0xC1FE, f"PUSH phase failed: expected SP=0xC1FE, got {hex(sp_mid)}"
-    assert low_mid == 0x31, f"PUSH phase failed: expected [0xC1FE]=0x31, got {hex(low_mid)}"
-    assert high_mid == 0x9A, f"PUSH phase failed: expected [0xC1FF]=0x9A, got {hex(high_mid)}"
+    assert (
+        low_mid == 0x31
+    ), f"PUSH phase failed: expected [0xC1FE]=0x31, got {hex(low_mid)}"
+    assert (
+        high_mid == 0x9A
+    ), f"PUSH phase failed: expected [0xC1FF]=0x9A, got {hex(high_mid)}"
 
     await do_cycles(dut, 3)  # POP DE
 
@@ -638,7 +642,9 @@ async def test_push_then_pop_roundtrip_bc_to_de(dut):
     sp = dut.reg_file.SP_reg.value.integer
 
     assert de == 0x9A31, f"PUSH/POP roundtrip failed: expected DE=0x9A31, got {hex(de)}"
-    assert sp == 0xC200, f"PUSH/POP roundtrip failed: expected SP restored to 0xC200, got {hex(sp)}"
+    assert (
+        sp == 0xC200
+    ), f"PUSH/POP roundtrip failed: expected SP restored to 0xC200, got {hex(sp)}"
 
 
 @cocotb.test()
@@ -652,7 +658,9 @@ async def test_ldh_a8_ind_a(dut):
     await do_cycles(dut, 3)
 
     actual = mem.data.get(0xFF42, 0)
-    assert actual == 0xAB, f"LDH (a8),A failed: expected [0xFF42]=0xAB, got {hex(actual)}"
+    assert (
+        actual == 0xAB
+    ), f"LDH (a8),A failed: expected [0xFF42]=0xAB, got {hex(actual)}"
 
 
 @cocotb.test()
@@ -681,7 +689,9 @@ async def test_ldh_c_ind_a(dut):
     await do_cycles(dut, 2)
 
     actual = mem.data.get(0xFF33, 0)
-    assert actual == 0x77, f"LDH (C),A failed: expected [0xFF33]=0x77, got {hex(actual)}"
+    assert (
+        actual == 0x77
+    ), f"LDH (C),A failed: expected [0xFF33]=0x77, got {hex(actual)}"
 
 
 @cocotb.test()
@@ -697,3 +707,39 @@ async def test_ldh_a_ind_c(dut):
 
     actual_a = (dut.reg_file.AF_reg.value.integer >> 8) & 0xFF
     assert actual_a == 0xC4, f"LDH A,(C) failed: expected A=0xC4, got {hex(actual_a)}"
+
+
+@cocotb.test()
+async def test_ld_a16_ind_a(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    # EA 34 12 => LD [0x1234], A
+    mem = CPUMemory(dut, [0xEA, 0x34, 0x12])
+    await reset_cpu(dut)
+
+    dut.reg_file.AF_reg.value = 0x9B00  # A=0x9B
+
+    await do_cycles(dut, 4)
+
+    actual = mem.data.get(0x1234, 0)
+    actual_a = (dut.reg_file.AF_reg.value.integer >> 8) & 0xFF
+    assert (
+        actual == 0x9B
+    ), f"LD [a16],A failed: expected [0x1234]=0x9B, got {hex(actual)}"
+    assert (
+        actual_a == 0x9B
+    ), f"LD [a16],A failed: A should remain 0x9B, got {hex(actual_a)}"
+
+
+@cocotb.test()
+async def test_ld_a_ind_a16(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    # FA 78 56 => LD A, [0x5678]
+    mem = CPUMemory(dut, [0xFA, 0x78, 0x56], data={0x5678: 0x3C})
+    await reset_cpu(dut)
+
+    dut.reg_file.AF_reg.value = 0x0000
+
+    await do_cycles(dut, 4)
+
+    actual_a = (dut.reg_file.AF_reg.value.integer >> 8) & 0xFF
+    assert actual_a == 0x3C, f"LD A,[a16] failed: expected A=0x3C, got {hex(actual_a)}"

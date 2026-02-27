@@ -804,6 +804,67 @@ module control (
         end
       end //.
 
+      // LD [a16], A
+      else if (comb_decoded_opcode == 8'hEA) begin
+        if (m_cycle == 0) begin
+          // M2: read imm16 to WZ, PC = PC + 2
+          m_cycle_next = 1;
+          comb_bus_opcode_out = READ;
+          comb_rf_write_r = 1;
+          comb_rf_write_reg_r = Z;
+        end else if (m_cycle == 1) begin
+          // M3: read imm16 to WZ, PC = PC + 2
+          m_cycle_next = 2;
+          comb_bus_opcode_out = READ;
+          comb_rf_write_r = 1;
+          comb_rf_write_reg_r = W;
+        end else if (m_cycle == 2) begin
+          // M4: [WZ] = A
+          m_cycle_next = 3;
+          comb_bus_opcode_out = WRITE;
+          comb_rf_read_r = 1;
+          comb_rf_read_reg_r = A;
+          comb_data_out_ctrl = DOUT_FROM_REG_FILE;
+          // Don't increment PC
+          comb_idu_en = 0;
+          // ADDR = WZ
+          comb_rf_read_rr = 1;
+          comb_rf_read_reg_rr = WZ;
+        end else begin
+          // M5/M1: IF
+          m_cycle_next = 0;
+        end
+      end //.
+
+      // LD A, [a16]
+      else if (comb_decoded_opcode == 8'hFA) begin
+        if (m_cycle == 0) begin
+          // M2: read imm16 to WZ, PC = PC + 2
+          m_cycle_next = 1;
+          comb_bus_opcode_out = READ;
+          comb_rf_write_r = 1;
+          comb_rf_write_reg_r = Z;
+        end else if (m_cycle == 1) begin
+          // M3: read imm16 to WZ, PC = PC + 2
+          m_cycle_next = 2;
+          comb_bus_opcode_out = READ;
+          comb_rf_write_r = 1;
+          comb_rf_write_reg_r = W;
+        end else if (m_cycle == 2) begin
+          // M4: A = [WZ]
+          m_cycle_next = 3;
+          comb_bus_opcode_out = READ;
+          comb_rf_write_r = 1;
+          comb_rf_write_reg_r = A;
+          // ADDR = WZ
+          comb_rf_read_rr = 1;
+          comb_rf_read_reg_rr = WZ;
+        end else begin
+          // M5/M1: IF
+          m_cycle_next = 0;
+        end
+      end //.
+
       // RLCA, RRCA, RLA, RRA, DAA, CPL, SCF, CCF
       else if (comb_decoded_opcode[7:6] == 2'b00 && comb_decoded_opcode[2:0] == 3'b111) begin
         comb_alu_en = 1;
