@@ -766,7 +766,9 @@ async def test_jr_e8_positive(dut):
     await do_cycles(dut, 3)
 
     actual_pc = dut.reg_file.PC_reg.value.to_unsigned()
-    assert actual_pc == 0x0007, f"JR e8 (+) failed: expected PC=0x0007, got {hex(actual_pc)}"
+    assert (
+        actual_pc == 0x0007
+    ), f"JR e8 (+) failed: expected PC=0x0007, got {hex(actual_pc)}"
 
 
 @cocotb.test()
@@ -778,7 +780,9 @@ async def test_jr_e8_negative(dut):
     await do_cycles(dut, 3)
 
     actual_pc = dut.reg_file.PC_reg.value.to_unsigned()
-    assert actual_pc == 0x0001, f"JR e8 (-) failed: expected PC=0x0001, got {hex(actual_pc)}"
+    assert (
+        actual_pc == 0x0001
+    ), f"JR e8 (-) failed: expected PC=0x0001, got {hex(actual_pc)}"
 
 
 @cocotb.test()
@@ -871,6 +875,191 @@ async def test_jr_c_e8_taken(dut):
 @cocotb.test()
 async def test_jr_c_e8_not_taken(dut):
     await _run_jr_cc_case(dut, 0x38, 0x0000, False, "C")
+
+
+async def _run_jp_cc_nn_case(
+    dut,
+    opcode: int,
+    flags: int,
+    should_jump: bool,
+    name: str,
+):
+    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
+    mem = CPUMemory(dut, [opcode, 0x34, 0x12, 0x00])
+    await reset_cpu(dut)
+
+    dut.reg_file.AF_reg.value = flags
+
+    await do_cycles(dut, 3 if should_jump else 2)
+
+    expected_pc = 0x1234 if should_jump else 0x0003
+    actual_pc = dut.reg_file.PC_reg.value.to_unsigned()
+    assert (
+        actual_pc == expected_pc
+    ), f"JP {name},nn failed: expected PC={hex(expected_pc)}, got {hex(actual_pc)}"
+
+
+@cocotb.test()
+async def test_jp_nz_nn_taken(dut):
+    await _run_jp_cc_nn_case(dut, 0xC2, 0x0000, True, "NZ")
+
+
+@cocotb.test()
+async def test_jp_nz_nn_not_taken(dut):
+    await _run_jp_cc_nn_case(dut, 0xC2, 0x0080, False, "NZ")
+
+
+@cocotb.test()
+async def test_jp_z_nn_taken(dut):
+    await _run_jp_cc_nn_case(dut, 0xCA, 0x0080, True, "Z")
+
+
+@cocotb.test()
+async def test_jp_z_nn_not_taken(dut):
+    await _run_jp_cc_nn_case(dut, 0xCA, 0x0000, False, "Z")
+
+
+@cocotb.test()
+async def test_jp_nc_nn_taken(dut):
+    await _run_jp_cc_nn_case(dut, 0xD2, 0x0080, True, "NC")
+
+
+@cocotb.test()
+async def test_jp_nc_nn_not_taken(dut):
+    await _run_jp_cc_nn_case(dut, 0xD2, 0x0090, False, "NC")
+
+
+@cocotb.test()
+async def test_jp_c_nn_taken(dut):
+    await _run_jp_cc_nn_case(dut, 0xDA, 0x0090, True, "C")
+
+
+@cocotb.test()
+async def test_jp_c_nn_not_taken(dut):
+    await _run_jp_cc_nn_case(dut, 0xDA, 0x0000, False, "C")
+
+
+@cocotb.test()
+async def test_jp_a16(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
+    mem = CPUMemory(dut, [0xC3, 0x34, 0x12, 0x00])
+    await reset_cpu(dut)
+
+    await do_cycles(dut, 3)
+
+    actual_pc = dut.reg_file.PC_reg.value.to_unsigned()
+    assert (
+        actual_pc == 0x1234
+    ), f"JP a16 failed: expected PC=0x1234, got {hex(actual_pc)}"
+
+
+@cocotb.test()
+async def test_jp_hl(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
+    mem = CPUMemory(dut, [0xE9, 0x00])
+    mem.data[0x1234] = 0x80
+    await reset_cpu(dut)
+
+    dut.reg_file.HL_reg.value = 0x1234
+
+    await do_cycles(dut, 0)
+    assert (
+        dut.addr_out.value.to_unsigned() == 0x1234
+    ), f"JP HL failed: expected address bus to read 0x1234, got {hex(dut.addr_out.value.to_unsigned())}"
+
+    await FallingEdge(dut.clk)  # Wait for IF to complete
+    actual_pc = dut.reg_file.PC_reg.value.to_unsigned()
+    assert (
+        actual_pc == 0x1235
+    ), f"JP HL failed: expected PC=0x1235, got {hex(actual_pc)}"
+    assert (
+        dut.opcode.value.to_unsigned() == 0x80
+    ), f"JP HL failed: expected opcode to still be 0x80 during execution"
+
+
+@cocotb.test()
+async def test_ret(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
+    mem = CPUMemory(dut, [0xC9], data={0xBFFC: 0x34, 0xBFFD: 0x12})
+    await reset_cpu(dut)
+
+    dut.reg_file.SP_reg.value = 0xBFFC
+
+    await do_cycles(dut, 3)
+
+    actual_pc = dut.reg_file.PC_reg.value.to_unsigned()
+    actual_sp = dut.reg_file.SP_reg.value.to_unsigned()
+    assert actual_pc == 0x1234, f"RET failed: expected PC=0x1234, got {hex(actual_pc)}"
+    assert actual_sp == 0xBFFE, f"RET failed: expected SP=0xBFFE, got {hex(actual_sp)}"
+
+
+async def _run_ret_cc_case(
+    dut,
+    opcode: int,
+    flags: int,
+    should_return: bool,
+    name: str,
+):
+    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
+    mem = CPUMemory(dut, [opcode, 0x00], data={0xBFFC: 0x34, 0xBFFD: 0x12})
+    await reset_cpu(dut)
+
+    dut.reg_file.AF_reg.value = flags
+    dut.reg_file.SP_reg.value = 0xBFFC
+
+    await do_cycles(dut, 4 if should_return else 1)
+
+    expected_pc = 0x1234 if should_return else 0x0001
+    expected_sp = 0xBFFE if should_return else 0xBFFC
+    actual_pc = dut.reg_file.PC_reg.value.to_unsigned()
+    actual_sp = dut.reg_file.SP_reg.value.to_unsigned()
+
+    assert (
+        actual_pc == expected_pc
+    ), f"RET {name} failed: expected PC={hex(expected_pc)}, got {hex(actual_pc)}"
+    assert (
+        actual_sp == expected_sp
+    ), f"RET {name} failed: expected SP={hex(expected_sp)}, got {hex(actual_sp)}"
+
+
+@cocotb.test()
+async def test_ret_nz_taken(dut):
+    await _run_ret_cc_case(dut, 0xC0, 0x0000, True, "NZ")
+
+
+@cocotb.test()
+async def test_ret_nz_not_taken(dut):
+    await _run_ret_cc_case(dut, 0xC0, 0x0080, False, "NZ")
+
+
+@cocotb.test()
+async def test_ret_z_taken(dut):
+    await _run_ret_cc_case(dut, 0xC8, 0x0080, True, "Z")
+
+
+@cocotb.test()
+async def test_ret_z_not_taken(dut):
+    await _run_ret_cc_case(dut, 0xC8, 0x0000, False, "Z")
+
+
+@cocotb.test()
+async def test_ret_nc_taken(dut):
+    await _run_ret_cc_case(dut, 0xD0, 0x0080, True, "NC")
+
+
+@cocotb.test()
+async def test_ret_nc_not_taken(dut):
+    await _run_ret_cc_case(dut, 0xD0, 0x0090, False, "NC")
+
+
+@cocotb.test()
+async def test_ret_c_taken(dut):
+    await _run_ret_cc_case(dut, 0xD8, 0x0090, True, "C")
+
+
+@cocotb.test()
+async def test_ret_c_not_taken(dut):
+    await _run_ret_cc_case(dut, 0xD8, 0x0000, False, "C")
 
 
 async def _run_rst_vector_case(dut, opcode: int, expected_vector: int):

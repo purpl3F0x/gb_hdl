@@ -32,6 +32,7 @@ module cpu (
   flags_t rf_flag_mask_n, rf_flags_in;
   // Internal 16-bit copy control
   copy_wz_to_rr_op_t rf_copy_wz_to_rr_op;
+  logic rf_copy_wz_to_rr_en;
   // PC reset control
   wire rf_pc_rst;
   wire [2:0] rf_pc_rst_vector;
@@ -60,6 +61,7 @@ module cpu (
       .write_reg_rr(rf_write_reg_rr),
       .data_in_rr(rf_data_in_rr),
       .copy_wz_to_rr_op(rf_copy_wz_to_rr_op),
+      .copy_wz_to_rr_en(rf_copy_wz_to_rr_en),
       .pc_rst(rf_pc_rst),
       .pc_rst_vector(rf_pc_rst_vector),
       .A_out(rf_A),
@@ -112,6 +114,7 @@ module cpu (
       .rf_write_reg_rr(rf_write_reg_rr),
       .rf_write_rr(rf_write_rr),
       .rf_copy_wz_to_rr_op(rf_copy_wz_to_rr_op),
+      .rf_copy_wz_to_rr_en(rf_copy_wz_to_rr_en),
       .rf_pc_rst(rf_pc_rst),
       .rf_flags_we(rf_flags_we),
       .rf_flag_mask_n(rf_flag_mask_n),

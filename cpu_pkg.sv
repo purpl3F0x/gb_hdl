@@ -34,13 +34,13 @@ package cpu_pkg;
     IDU_JR_ADJ
   } idu_op_t;
 
-  typedef enum logic [2:0] {  // TODO: this needs to be sperated with enable signal
-    NO_COPY = 3'b000,
-    COPY_WZ_TO_BC = 3'b100,
-    COPY_WZ_TO_DE = 3'b101,
-    COPY_WZ_TO_HL = 3'b110,
-    COPY_WZ_TO_SP = 3'b111,
-    COPY_WZ_TO_AF = 3'b001
+  typedef enum logic [2:0] {
+    COPY_WZ_TO_BC = 3'b000,
+    COPY_WZ_TO_DE = 3'b001,
+    COPY_WZ_TO_HL = 3'b010,
+    COPY_WZ_TO_SP = 3'b011,
+    COPY_WZ_TO_AF = 3'b100,
+    COPY_WZ_TO_PC = 3'b101
   } copy_wz_to_rr_op_t;
 
   typedef enum logic [2:0] {

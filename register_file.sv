@@ -27,7 +27,8 @@ module register_file (
     input register_nn_t write_reg_rr,
     input [15:0] data_in_rr,
 
-    input copy_wz_to_rr_op_t copy_wz_to_rr_op,  // Will copy WZ to the specified register if active
+    input copy_wz_to_rr_op_t copy_wz_to_rr_op,
+    input copy_wz_to_rr_en,
     input pc_rst,
     input [2:0] pc_rst_vector,
 
@@ -149,13 +150,14 @@ module register_file (
       endcase
     end
 
-    if (write_reg_rr == PC || write_reg_r == 0) begin
+    if (copy_wz_to_rr_en) begin
       case (copy_wz_to_rr_op)
         COPY_WZ_TO_BC: BC_next = WZ_next;
         COPY_WZ_TO_DE: DE_next = WZ_next;
         COPY_WZ_TO_HL: HL_next = WZ_next;
         COPY_WZ_TO_SP: SP_next = WZ_next;
         COPY_WZ_TO_AF: AF_next[15:4] = WZ_next[15:4];
+        COPY_WZ_TO_PC: PC_next = WZ_next;
         default: ;
       endcase
     end
