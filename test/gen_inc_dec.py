@@ -13,13 +13,13 @@ def generate():
                 f"""
 @cocotb.test()
 async def test_{op.lower()}_16bit_{rr.lower()}(dut):
-    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
     mem = CPUMemory(dut, [{hex(opcode)}, 0x00])
     await reset_cpu(dut)
     dut.reg_file.{rr}_reg.value = 0x1000
     await do_cycles(dut,2)
     expected = (0x1000 + {expected_change}) & 0xFFFF
-    actual = dut.reg_file.{rr}_reg.value.integer
+    actual = dut.reg_file.{rr}_reg.value.to_unsigned()
     assert actual == expected, f"{op} {rr} failed: expected {{hex(expected)}}, got {{hex(actual)}}"
 """
             )
@@ -36,7 +36,7 @@ async def test_{op.lower()}_16bit_{rr.lower()}(dut):
                     f"""
 @cocotb.test()
 async def test_{op.lower()}_8bit_hl_ind(dut):
-    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
     mem = CPUMemory(dut, [{hex(opcode)}, 0x00], data={{0x8000: {hex(val)}}})
     await reset_cpu(dut)
     dut.reg_file.HL_reg.value = 0x8000
@@ -53,12 +53,12 @@ async def test_{op.lower()}_8bit_hl_ind(dut):
                     f"""
 @cocotb.test()
 async def test_{op.lower()}_8bit_{r.lower()}(dut):
-    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
     mem = CPUMemory(dut, [{hex(opcode)}, 0x00])
     await reset_cpu(dut)
     dut.reg_file.{reg16}_reg.value = {hex(val << shift)}
     await do_cycles(dut,1)
-    actual = (dut.reg_file.{reg16}_reg.value.integer >> {shift}) & 0xFF
+    actual = (dut.reg_file.{reg16}_reg.value.to_unsigned() >> {shift}) & 0xFF
     assert actual == {hex(expected)}, f"{op} {r} failed: expected {hex(expected)}, got {{hex(actual)}}"
 """
                 )

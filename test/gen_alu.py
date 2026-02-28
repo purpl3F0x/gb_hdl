@@ -49,19 +49,19 @@ def generate():
                         f"""
 @cocotb.test()
 async def test_alu_{op.lower()}_a_hl_ind{test_name_suffix}(dut):
-    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
     mem = CPUMemory(dut, [{hex(opcode)}, 0x00], data={{0x8000: {hex(b_val)}}})
     await reset_cpu(dut)
     dut.reg_file.AF_reg.value = ({hex(a_val)} << 8) | {hex(flag_in)}
     dut.reg_file.HL_reg.value = 0x8000
     await do_cycles(dut,2)
-    actual_a = (dut.reg_file.AF_reg.value.integer >> 8) & 0xFF
+    actual_a = (dut.reg_file.AF_reg.value.to_unsigned() >> 8) & 0xFF
     assert actual_a == {hex(expected_a)}, f"{op} A, (HL) {v_name} failed: expected A={hex(expected_a)}, got {{hex(actual_a)}}"
 """
                     )
                     if expected_f is not None:
                         out.append(
-                            f"    actual_f = (dut.reg_file.AF_reg.value.integer >> 4) & 0x0F\n"
+                            f"    actual_f = (dut.reg_file.AF_reg.value.to_unsigned() >> 4) & 0x0F\n"
                         )
                         out.append(
                             f'    assert actual_f == {hex(expected_f >> 4)}, f"{op} A, (HL) {v_name} failed: expected F={hex(expected_f >> 4)}, got {{hex(actual_f)}}"\n'
@@ -72,20 +72,20 @@ async def test_alu_{op.lower()}_a_hl_ind{test_name_suffix}(dut):
                         f"""
 @cocotb.test()
 async def test_alu_{op.lower()}_a_{r.lower()}{test_name_suffix}(dut):
-    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
     mem = CPUMemory(dut, [{hex(opcode)}, 0x00])
     await reset_cpu(dut)
     dut.reg_file.AF_reg.value = ({hex(a_val)} << 8) | {hex(flag_in)}
     if "{r}" != "A":
         dut.reg_file.{reg16}_reg.value = ({hex(b_val)} << {shift})
     await do_cycles(dut,1)
-    actual_a = (dut.reg_file.AF_reg.value.integer >> 8) & 0xFF
+    actual_a = (dut.reg_file.AF_reg.value.to_unsigned() >> 8) & 0xFF
     assert actual_a == {hex(expected_a)}, f"{op} A, {r} {v_name} failed: expected A={hex(expected_a)}, got {{hex(actual_a)}}"
 """
                     )
                     if expected_f is not None:
                         out.append(
-                            f"    actual_f = (dut.reg_file.AF_reg.value.integer >> 4) & 0x0F\n"
+                            f"    actual_f = (dut.reg_file.AF_reg.value.to_unsigned() >> 4) & 0x0F\n"
                         )
                         out.append(
                             f'    assert actual_f == {hex(expected_f >> 4)}, f"{op} A, {r} {v_name} failed: expected F={hex(expected_f >> 4)}, got {{hex(actual_f)}}"\n'
@@ -101,12 +101,12 @@ async def test_alu_{op.lower()}_a_{r.lower()}{test_name_suffix}(dut):
             f"""
 @cocotb.test()
 async def test_alu_imm_{op.lower()}_a_n(dut):
-    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
     mem = CPUMemory(dut, [{hex(opcode)}, {hex(n_val)}, 0x00])
     await reset_cpu(dut)
     dut.reg_file.AF_reg.value = {hex(a_val << 8)}
     await do_cycles(dut,2)
-    actual = (dut.reg_file.AF_reg.value.integer >> 8) & 0xFF
+    actual = (dut.reg_file.AF_reg.value.to_unsigned() >> 8) & 0xFF
     assert actual == {hex(expected)}, f"{op} A, n failed: expected {hex(expected)}, got {{hex(actual)}}"
 """
         )
