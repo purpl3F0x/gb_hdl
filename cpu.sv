@@ -1,6 +1,7 @@
 `timescale 1ns / 1ps
 
 import alu_pkg::*;
+import cpu_pkg::*;
 
 module cpu (
     input logic clk,
@@ -67,13 +68,15 @@ module cpu (
       .flags_out(rf_flags_out)
   );
 
-  wire idu_op, idu_en;
+  idu_op_t idu_op;
+  wire idu_en;
   wire [15:0] idu_dout;
 
   idu idu_unit (
       .en(idu_en),
       .op(idu_op),
       .data_in(rf_data_out_rr),
+      .e8(rf_data_out_r),
       .data_out(idu_dout)
   );
 
@@ -94,6 +97,7 @@ module cpu (
       .next_opcode(opcode),
       .cb_opcode(cb_opcode),
       .bus_opcode_out(bus_op),
+      .rf_flags(rf_flags_out),
 
       .idu_op(idu_op),
       .idu_en(idu_en),

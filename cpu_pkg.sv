@@ -27,6 +27,13 @@ package cpu_pkg;
     LDH_C = 3'b111  // (0xFF00 + C)
   } register_nn_t;
 
+  typedef enum logic [1:0] {
+    IDU_INC,
+    IDU_DEC,
+    IDU_PASS,
+    IDU_JR_ADJ
+  } idu_op_t;
+
   typedef enum logic [2:0] {  // TODO: this needs to be sperated with enable signal
     NO_COPY = 3'b000,
     COPY_WZ_TO_BC = 3'b100,
@@ -56,7 +63,7 @@ package cpu_pkg;
     ALU_SRC_A_H
   } alu_src_a_select_t;
 
-  typedef enum logic [1:0] {
+  typedef enum logic {
     ALU_SRC_B_REG,
     ALU_SRC_B_ONE
   } alu_src_b_select_t;

@@ -757,6 +757,122 @@ async def test_ld_a_ind_a16(dut):
     assert actual_a == 0x3C, f"LD A,[a16] failed: expected A=0x3C, got {hex(actual_a)}"
 
 
+@cocotb.test()
+async def test_jr_e8_positive(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [0x18, 0x05, 0x00])  # JR +5
+    await reset_cpu(dut)
+
+    await do_cycles(dut, 3)
+
+    actual_pc = dut.reg_file.PC_reg.value.integer
+    assert actual_pc == 0x0007, f"JR e8 (+) failed: expected PC=0x0007, got {hex(actual_pc)}"
+
+
+@cocotb.test()
+async def test_jr_e8_negative(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [0x18, 0xFF, 0x00])  # JR -1
+    await reset_cpu(dut)
+
+    await do_cycles(dut, 3)
+
+    actual_pc = dut.reg_file.PC_reg.value.integer
+    assert actual_pc == 0x0001, f"JR e8 (-) failed: expected PC=0x0001, got {hex(actual_pc)}"
+
+
+@cocotb.test()
+async def test_jr_e8_positive_with_carry(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [], data={0x00FE: 0x18, 0x00FF: 0x02})  # JR +2 at 0x00FE
+    await reset_cpu(dut)
+    dut.reg_file.PC_reg.value = 0x00FE
+
+    await do_cycles(dut, 3)
+
+    actual_pc = dut.reg_file.PC_reg.value.integer
+    assert (
+        actual_pc == 0x0102
+    ), f"JR e8 (+ carry) failed: expected PC=0x0102, got {hex(actual_pc)}"
+
+
+@cocotb.test()
+async def test_jr_e8_negative_with_carry(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [], data={0x0100: 0x18, 0x0101: 0xFD})  # JR -3 at 0x0100
+    await reset_cpu(dut)
+    dut.reg_file.PC_reg.value = 0x0100
+
+    await do_cycles(dut, 3)
+
+    actual_pc = dut.reg_file.PC_reg.value.integer
+    assert (
+        actual_pc == 0x00FF
+    ), f"JR e8 (- carry) failed: expected PC=0x00FF, got {hex(actual_pc)}"
+
+
+async def _run_jr_cc_case(
+    dut,
+    opcode: int,
+    flags: int,
+    should_jump: bool,
+    name: str,
+):
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = CPUMemory(dut, [opcode, 0x02, 0x00])
+    await reset_cpu(dut)
+
+    dut.reg_file.AF_reg.value = flags
+
+    await do_cycles(dut, 3 if should_jump else 2)
+
+    expected_pc = 0x0004 if should_jump else 0x0002
+    actual_pc = dut.reg_file.PC_reg.value.integer
+    assert (
+        actual_pc == expected_pc
+    ), f"JR {name},e8 failed: expected PC={hex(expected_pc)}, got {hex(actual_pc)}"
+
+
+@cocotb.test()
+async def test_jr_nz_e8_taken(dut):
+    await _run_jr_cc_case(dut, 0x20, 0x0000, True, "NZ")
+
+
+@cocotb.test()
+async def test_jr_nz_e8_not_taken(dut):
+    await _run_jr_cc_case(dut, 0x20, 0x0080, False, "NZ")
+
+
+@cocotb.test()
+async def test_jr_z_e8_taken(dut):
+    await _run_jr_cc_case(dut, 0x28, 0x0080, True, "Z")
+
+
+@cocotb.test()
+async def test_jr_z_e8_not_taken(dut):
+    await _run_jr_cc_case(dut, 0x28, 0x0000, False, "Z")
+
+
+@cocotb.test()
+async def test_jr_nc_e8_taken(dut):
+    await _run_jr_cc_case(dut, 0x30, 0x0080, True, "NC")
+
+
+@cocotb.test()
+async def test_jr_nc_e8_not_taken(dut):
+    await _run_jr_cc_case(dut, 0x30, 0x0090, False, "NC")
+
+
+@cocotb.test()
+async def test_jr_c_e8_taken(dut):
+    await _run_jr_cc_case(dut, 0x38, 0x0090, True, "C")
+
+
+@cocotb.test()
+async def test_jr_c_e8_not_taken(dut):
+    await _run_jr_cc_case(dut, 0x38, 0x0000, False, "C")
+
+
 async def _run_rst_vector_case(dut, opcode: int, expected_vector: int):
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     mem = CPUMemory(dut, [opcode, 0x00])
