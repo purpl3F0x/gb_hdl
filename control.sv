@@ -15,6 +15,7 @@ module control (
     output bus_opcode_t bus_opcode_out,
 
     // IDU control signals
+    output reg locked,
     output idu_op_t idu_op,
     output reg idu_en,
 
@@ -48,6 +49,10 @@ module control (
     output data_out_ctrl_t data_out_ctrl
 );
 
+  reg ime, comb_ime;
+  reg halt, comb_halt;
+  reg comb_locked;
+
   reg [7:0] decoded_opcode;
 
   reg [2:0] m_cycle, m_cycle_next;
@@ -80,6 +85,9 @@ module control (
 
 
   always_comb begin
+    comb_ime = ime;
+    comb_halt = halt;
+    comb_locked = comb_locked;
     comb_decoded_opcode = 8'h00;
     comb_bus_opcode_out = IDLE;
     comb_idu_op = IDU_INC;
@@ -107,11 +115,14 @@ module control (
     comb_data_out_ctrl = DOUT_FROM_ALU_RES;
 
     if (rst) begin
+      comb_ime = 0;
+      comb_halt = 0;
+      comb_locked = 0;
       m_cycle_next = 0;
     end
 
     if (!rst) begin
-      comb_decoded_opcode = (m_cycle == 0) ? next_opcode : decoded_opcode;
+      comb_decoded_opcode = next_opcode;
       comb_bus_opcode_out = IF;
       comb_idu_op = IDU_INC;
       comb_idu_en = 1;
@@ -129,8 +140,25 @@ module control (
       comb_rf_flags_we = 0;
       comb_rf_flag_mask_n = 4'b0000;
 
+      // TODO: check for IME/ HALT here
+
       // NOP
       if (comb_decoded_opcode == 8'h00) begin
+      end //.
+
+      // STOP
+      else if (comb_decoded_opcode == 8'h10) begin
+        // TODO: Not used on real games, except for switchin to GBC mode.
+      end //.
+
+      // DI / EI
+      else if (comb_decoded_opcode[7:4] == 4'b1111 && comb_decoded_opcode[2:0] == 3'b011) begin
+        comb_ime = comb_decoded_opcode[3];
+      end //.
+
+      // HALT
+      else if (comb_decoded_opcode == 8'h76) begin
+        comb_halt = 1;
       end //.
 
       // 16-bit LD from imm
@@ -1054,7 +1082,9 @@ module control (
           comb_rf_read_rr = 0;
           comb_rf_write_rr = 0;
           // If RETI, also set IME = 1
-          // TODO: Enable IME
+          if (comb_decoded_opcode[4] == 1'b1) begin
+            comb_ime = 1;
+          end
         end else begin
           // M5/M1: IF
           m_cycle_next = 0;
@@ -1437,15 +1467,33 @@ module control (
         end else begin
           // TODO
         end
-      end
+      end  //.
 
+      // INVALID
+      else begin
+        locked = 1;
+        comb_ime = 0;
+        comb_idu_en = 0;
+        comb_rf_read_rr = 0;
+        comb_rf_write_rr = 0;
+        comb_bus_opcode_out = IDLE;
+        comb_ime = 0;
+      end
     end
   end
 
   always @(posedge clk) begin
-
-    if (rst) m_cycle <= 0;
-    else m_cycle <= m_cycle_next;
+    if (rst) begin
+      m_cycle <= 0;
+      ime <= 0;
+      halt <= 0;
+      locked <= 0;
+    end else begin
+      m_cycle <= m_cycle_next;
+      ime <= comb_ime;
+      halt <= comb_halt;
+      locked <= comb_locked;
+    end
   end
 
 

@@ -19,6 +19,8 @@ module cpu (
   reg [7:0] cb_opcode;
   data_out_ctrl_t data_out_ctrl;
 
+  wire locked;
+
   // Register File
   logic [7:0] rf_data_out_r, rf_data_in_r;
   logic [15:0] rf_data_out_rr, rf_data_in_rr;
@@ -99,6 +101,8 @@ module cpu (
       .bus_opcode_out(bus_op),
       .rf_flags(rf_flags_out),
 
+      .locked(locked),
+
       .idu_op(idu_op),
       .idu_en(idu_en),
 
@@ -172,7 +176,7 @@ module cpu (
                     : 8'h00; // TODO: This can probably be merged to checking if ALU is enabled
 
   // For metrics
-  reg [47:0] counter;  // 8.5 years should be enough for tracing :)
+  (* keep = "true" *) reg [47:0] counter;  // 8.5 years should be enough for tracing :)
 
   always @(posedge clk) begin
     if (rst) begin
@@ -180,7 +184,8 @@ module cpu (
       opcode <= 8'h00;
       cb_opcode <= 8'h00;
     end else begin
-      counter  <= counter + 1;
+
+      if (!locked) counter <= counter + 1;
 
       case (bus_op)
         IF: begin
