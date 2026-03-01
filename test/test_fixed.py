@@ -9,11 +9,11 @@ async def test_nop(dut):
     cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
     mem = CPUMemory(dut, [0x00])
     await reset_cpu(dut)
-    await RisingEdge(dut.clk)
-    await FallingEdge(dut.clk)
+    await do_cycles(dut, 0)
     assert (
         dut.reg_file.PC_reg.value.to_unsigned() == 1
-    ), f"PC should be 1, got {dut.reg_file.PC_reg.value.to_unsigned()}"
+    ), f"PC should be 0, got {dut.reg_file.PC_reg.value.to_unsigned()}"
+
 
 
 @cocotb.test()
@@ -844,12 +844,16 @@ async def test_jr_e8_positive(dut):
     mem = CPUMemory(dut, [0x18, 0x05, 0x00])  # JR +5
     await reset_cpu(dut)
 
-    await do_cycles(dut, 3)
-
+    await do_cycles(dut, 2)
     actual_pc = dut.reg_file.PC_reg.value.to_unsigned()
     assert (
         actual_pc == 0x0007
     ), f"JR e8 (+) failed: expected PC=0x0007, got {hex(actual_pc)}"
+    await do_cycles(dut, 1)
+    actual_pc = dut.reg_file.PC_reg.value.to_unsigned()
+    assert (
+        actual_pc == 0x0008
+    ), f"JR e8 (+) failed: expected PC=0x0008, got {hex(actual_pc)}"
 
 
 @cocotb.test()
@@ -858,12 +862,16 @@ async def test_jr_e8_negative(dut):
     mem = CPUMemory(dut, [0x18, 0xFF, 0x00])  # JR -1
     await reset_cpu(dut)
 
-    await do_cycles(dut, 3)
-
+    await do_cycles(dut, 2)
     actual_pc = dut.reg_file.PC_reg.value.to_unsigned()
     assert (
         actual_pc == 0x0001
     ), f"JR e8 (-) failed: expected PC=0x0001, got {hex(actual_pc)}"
+    await do_cycles(dut, 1)
+    actual_pc = dut.reg_file.PC_reg.value.to_unsigned()
+    assert (
+        actual_pc == 0x0002
+    ), f"JR e8 (+) failed: expected PC=0x0002, got {hex(actual_pc)}"
 
 
 @cocotb.test()
@@ -888,7 +896,7 @@ async def test_jr_e8_negative_with_carry(dut):
     await reset_cpu(dut)
     dut.reg_file.PC_reg.value = 0x0100
 
-    await do_cycles(dut, 3)
+    await do_cycles(dut, 3) # we need 3 cycles cause nop is executed fist at PC: 0
 
     actual_pc = dut.reg_file.PC_reg.value.to_unsigned()
     assert (
@@ -909,7 +917,7 @@ async def _run_jr_cc_case(
 
     dut.reg_file.AF_reg.value = flags
 
-    await do_cycles(dut, 3 if should_jump else 2)
+    await do_cycles(dut, 2 if should_jump else 1)
 
     expected_pc = 0x0004 if should_jump else 0x0002
     actual_pc = dut.reg_file.PC_reg.value.to_unsigned()

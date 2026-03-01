@@ -15,8 +15,6 @@ module cpu (
     output wire [7:0] data_out
 );
 
-  reg rst_sync;  // synchronized reset for combinational logic (control unit)
-
   reg [7:0] opcode;
   reg [7:0] cb_opcode;
   data_out_ctrl_t data_out_ctrl;
@@ -95,7 +93,7 @@ module cpu (
 
   control control_unit (
       .clk(clk),
-      .rst(rst_sync),
+      .rst(rst),
       .next_opcode(opcode),
       .cb_opcode(cb_opcode),
       .bus_opcode_out(bus_op),
@@ -181,9 +179,7 @@ module cpu (
       counter <= 0;
       opcode <= 8'h00;
       cb_opcode <= 8'h00;
-      rst_sync <= 1;
     end else begin
-      rst_sync <= 0;
       counter  <= counter + 1;
 
       case (bus_op)

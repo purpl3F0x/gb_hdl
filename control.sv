@@ -591,6 +591,7 @@ module control (
         end
 
       end //.
+
       // 8-bit ALU OP imm2reg
       else if (comb_decoded_opcode[7:6] == 2'b11 && comb_decoded_opcode[2:0] == 3'b110) begin
         if (m_cycle == 0) begin
@@ -948,7 +949,7 @@ module control (
         end
       end //.
 
-      // JR imm8
+      // JR e8
       else if (comb_decoded_opcode == 8'h18) begin
         if (m_cycle == 0) begin
           // M2 Z = e8
@@ -957,7 +958,7 @@ module control (
           comb_rf_write_r = 1;
           comb_rf_write_reg_r = Z;
 
-          comb_rf_write_rr = 0;  // don't advance PC
+          comb_rf_write_rr = 1;
 
         end else if (m_cycle == 1) begin
           // M3: PC = PC + imm8
@@ -987,7 +988,7 @@ module control (
           comb_bus_opcode_out = READ;
           comb_rf_write_r = 1;
           comb_rf_write_reg_r = Z;
-          comb_rf_write_rr = 0;  // don't advance PC
+          comb_rf_write_rr = 1;
 
           // Do we jump ?
           case (comb_decoded_opcode[4:3])

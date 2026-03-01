@@ -40,6 +40,6 @@ async def reset_cpu(dut):
 
 
 async def do_cycles(dut, c: int):
-    for _ in range(c + 1):
+    for _ in range(c):
         await RisingEdge(dut.clk)
     await FallingEdge(dut.clk)

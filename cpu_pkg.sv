@@ -70,4 +70,14 @@ package cpu_pkg;
     // ALU_SRC_B_RR_HIGH  // Sets ALU_B to high byte of the Register Pair specified by write_reg_rr (unused)
   } alu_src_b_select_t;
 
+  typedef struct packed {
+    logic en;
+    register_n_t reg_n;
+  } rf_r_ctrl_t;
+
+  typedef struct packed {
+    logic en;
+    register_nn_t reg_nn;
+  } rf_rr_ctrl_t;
+
 endpackage
