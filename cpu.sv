@@ -87,7 +87,6 @@ module cpu (
 
   wire alu_en;
   alu_op_t alu_op;
-  wire [2:0] alu_bit_idx;
   alu_src_a_select_t alu_src_a_select;
   alu_src_b_select_t alu_src_b_select;
   logic [7:0] alu_A, alu_B, alu_res;
@@ -123,7 +122,6 @@ module cpu (
 
       .alu_en(alu_en),
       .alu_op(alu_op),
-      .alu_bit_idx(alu_bit_idx),
       .alu_src_a_select(alu_src_a_select),
       .alu_src_b_select(alu_src_b_select),
 
@@ -153,6 +151,9 @@ module cpu (
 
   end
 
+  wire [2:0] alu_bit_idx;
+
+  assign alu_bit_idx = cb_opcode[5:3];
 
   ALU alu_unit (
       .en(alu_en),
