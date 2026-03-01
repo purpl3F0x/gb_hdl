@@ -17,7 +17,7 @@ module idu (
         IDU_INC: data_out = data_in + 1;
         IDU_DEC: data_out = data_in - 1;
         IDU_PASS: data_out = data_in;
-        IDU_JR_ADJ: data_out = data_in + {{8{e8[7]}}, e8};
+        IDU_ADD_S8: data_out = data_in + {{8{e8[7]}}, e8};
         default: data_out = 16'h0000;
       endcase
     end

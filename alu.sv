@@ -32,7 +32,7 @@ module ALU (
 
     if (en) begin
       case (op)
-        ADD, ADC, SUB, SBC, CP: begin
+        ADD, ADC, SUB, SBC, CP, SP_ADJ: begin
           logic [7:0] B_eff;
           logic h_c, c_c;
 
@@ -43,8 +43,8 @@ module ALU (
           flags_out.N = op[1];
           flags_out.H = h_c ^ op[1];
           flags_out.C = c_c ^ op[1];
-          flags_out.Z = (res == 0);
-          if (op == CP) res = 0;
+          flags_out.Z = ((res == 0) && !(op == SP_ADJ));
+          if (op == CP || op == SP_ADJ) res = 0;
         end
 
         AND: begin

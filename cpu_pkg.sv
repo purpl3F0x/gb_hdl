@@ -31,7 +31,7 @@ package cpu_pkg;
     IDU_INC,
     IDU_DEC,
     IDU_PASS,
-    IDU_JR_ADJ
+    IDU_ADD_S8 // Add with s8 read from rf_read_r
   } idu_op_t;
 
   typedef enum logic [2:0] {
@@ -63,9 +63,11 @@ package cpu_pkg;
     ALU_SRC_A_H
   } alu_src_a_select_t;
 
-  typedef enum logic {
+  typedef enum logic [1:0] {
     ALU_SRC_B_REG,
-    ALU_SRC_B_ONE
+    ALU_SRC_B_ONE,
+    ALU_SRC_B_RR_LOW  // Sets ALU_B to low byte of the Register Pair specified by write_reg_rr
+    // ALU_SRC_B_RR_HIGH  // Sets ALU_B to high byte of the Register Pair specified by write_reg_rr (unused)
   } alu_src_b_select_t;
 
 endpackage

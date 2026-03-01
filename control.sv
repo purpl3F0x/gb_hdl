@@ -973,7 +973,7 @@ module control (
           comb_rf_read_r = 1;
           comb_rf_read_reg_r = Z;
           comb_idu_en = 1;
-          comb_idu_op = IDU_JR_ADJ;
+          comb_idu_op = IDU_ADD_S8;
         end else begin
           // M4/M1: IF
           m_cycle_next = 0;
@@ -1011,7 +1011,7 @@ module control (
           comb_rf_read_r = 1;
           comb_rf_read_reg_r = Z;
           comb_idu_en = 1;
-          comb_idu_op = IDU_JR_ADJ;
+          comb_idu_op = IDU_ADD_S8;
         end else begin
           // M4(or M3)/M1: IF
           m_cycle_next = 0;
@@ -1197,6 +1197,225 @@ module control (
         comb_rf_write_rr = 1;
         comb_rf_write_reg_rr = PC;
       end  //.
+
+      // CALL a16
+      else if (comb_decoded_opcode == 8'hCD) begin
+        if (m_cycle == 0) begin
+          // M2: Z = [PC], PC = PC + 1
+          m_cycle_next = 1;
+          comb_bus_opcode_out = READ;
+          comb_rf_write_r = 1;
+          comb_rf_write_reg_r = Z;
+        end else if (m_cycle == 1) begin
+          // M3: W = [PC], PC = PC + 1
+          m_cycle_next = 2;
+          comb_bus_opcode_out = READ;
+          comb_rf_write_r = 1;
+          comb_rf_write_reg_r = W;
+        end else if (m_cycle == 2) begin
+          // M4 SP = SP - 1
+          m_cycle_next = 3;
+          comb_idu_en = 1;
+          comb_idu_op = IDU_DEC;
+          comb_rf_read_rr = 1;
+          comb_rf_read_reg_rr = SP;
+          comb_rf_write_rr = 1;
+          comb_rf_write_reg_rr = SP;
+          comb_bus_opcode_out = IDLE;
+        end else if (m_cycle == 3) begin
+          // M5: [SP] = PCH, SP = SP - 1
+          m_cycle_next = 4;
+          // [SP] = PCH
+          comb_bus_opcode_out = WRITE;
+          comb_rf_read_rr = 1;
+          comb_rf_read_reg_rr = SP;
+          comb_rf_read_r = 1;
+          comb_rf_read_reg_r = PCH;
+          comb_data_out_ctrl = DOUT_FROM_REG_FILE;
+          // SP = SP - 1
+          comb_idu_en = 1;
+          comb_idu_op = IDU_DEC;
+          comb_rf_read_rr = 1;
+          comb_rf_read_reg_rr = SP;
+          comb_rf_write_rr = 1;
+          comb_rf_write_reg_rr = SP;
+        end else if (m_cycle == 4) begin
+          // M6: [SP] = PCL, PC = WZ
+          m_cycle_next = 5;
+          comb_bus_opcode_out = WRITE;
+          comb_rf_read_rr = 1;
+          comb_rf_read_reg_rr = SP;
+          // Don't write SP, disable IDU
+          comb_rf_write_rr = 0;
+          comb_idu_en = 0;
+          comb_rf_read_r = 1;
+          comb_rf_read_reg_r = PCL;
+          comb_data_out_ctrl = DOUT_FROM_REG_FILE;
+          // PC = WZ
+          comb_rf_copy_wz_to_rr_op = COPY_WZ_TO_PC;
+          comb_rf_copy_wz_to_rr_en = 1;
+        end else begin
+          // M7/M1: IF
+          m_cycle_next = 0;
+        end
+      end //..
+
+      // CALL CC, a16
+      else if (comb_decoded_opcode[7:5] == 3'b110 && comb_decoded_opcode[2:0] == 3'b100) begin
+        if (m_cycle == 0) begin
+          // M2: Z = [PC], PC = PC + 1
+          m_cycle_next = 1;
+          comb_bus_opcode_out = READ;
+          comb_rf_write_r = 1;
+          comb_rf_write_reg_r = Z;
+        end else if (m_cycle == 1) begin
+          // M3: W = [PC], PC = PC + 1, cc check
+          m_cycle_next = 2;
+          comb_bus_opcode_out = READ;
+          comb_rf_write_r = 1;
+          comb_rf_write_reg_r = W;
+
+          case (comb_decoded_opcode[4:3])
+            2'b00:   m_cycle_next = (~rf_flags.Z) ? 2 : 6;
+            2'b01:   m_cycle_next = (rf_flags.Z) ? 2 : 6;
+            2'b10:   m_cycle_next = (~rf_flags.C) ? 2 : 6;
+            2'b11:   m_cycle_next = (rf_flags.C) ? 2 : 6;
+            default: m_cycle_next = 6;
+          endcase
+
+        end else if (m_cycle == 2) begin
+          // M4: If condition is true, SP = SP - 1
+          m_cycle_next = 3;
+          comb_idu_en = 1;
+          comb_idu_op = IDU_DEC;
+          comb_rf_read_rr = 1;
+          comb_rf_read_reg_rr = SP;
+          comb_rf_write_rr = 1;
+          comb_rf_write_reg_rr = SP;
+          comb_bus_opcode_out = IDLE;
+
+        end else if (m_cycle == 3) begin
+          // M5: If condition is true, [SP] = PCH, SP = SP - 1
+          m_cycle_next = 4;
+          // [SP] = PCH
+          comb_bus_opcode_out = WRITE;
+          comb_rf_read_rr = 1;
+          comb_rf_read_reg_rr = SP;
+          comb_rf_read_r = 1;
+          comb_rf_read_reg_r = PCH;
+          comb_data_out_ctrl = DOUT_FROM_REG_FILE;
+          // SP = SP - 1
+          comb_idu_en = 1;
+          comb_idu_op = IDU_DEC;
+          comb_rf_read_rr = 1;
+          comb_rf_read_reg_rr = SP;
+          comb_rf_write_rr = 1;
+          comb_rf_write_reg_rr = SP;
+        end else if (m_cycle == 4) begin
+          // M6: If condition is true, [SP] = PCL, PC = WZ
+          m_cycle_next = 5;
+          comb_bus_opcode_out = WRITE;
+          comb_rf_read_rr = 1;
+          comb_rf_read_reg_rr = SP;
+          // Don't write SP, disable IDU
+          comb_rf_write_rr = 0;
+          comb_idu_en = 0;
+          comb_rf_read_r = 1;
+          comb_rf_read_reg_r = PCL;
+          comb_data_out_ctrl = DOUT_FROM_REG_FILE;
+          // PC = WZ
+          comb_rf_copy_wz_to_rr_op = COPY_WZ_TO_PC;
+          comb_rf_copy_wz_to_rr_en = 1;
+        end else begin
+          // M7/M1: IF
+          m_cycle_next = 0;
+        end
+      end //.
+
+      // ADD SP, e8
+      else if (comb_decoded_opcode == 8'hE8) begin
+        // bruhh ...
+        // We will do this one a it diffrently
+        // We will cacluate the flags using the ALU and the actual result using the IDU
+        // M2: Read e8 to Z
+        // M3: IDU: (SP + Z), ALU: SPL + Z, write
+        // M4: Stall
+        // M5: IF
+        if (m_cycle == 0) begin
+          m_cycle_next = 1;
+          comb_bus_opcode_out = READ;
+          comb_rf_write_r = 1;
+          comb_rf_write_reg_r = Z;
+
+        end else if (m_cycle == 1) begin
+          // M3. IDU: SP = SP + Z, ALU: SPL + Z
+          m_cycle_next = 2;
+          comb_bus_opcode_out = IDLE;
+          // SP +(IDU_ADD_S8)+ Z
+          comb_idu_en = 1;
+          comb_idu_op = IDU_ADD_S8;
+          comb_rf_read_rr = 1;
+          comb_rf_read_reg_rr = SP;
+          comb_rf_write_rr = 1;
+          comb_rf_write_reg_rr = SP;
+          comb_rf_read_r = 1;
+          comb_rf_read_reg_r = Z;
+          // Calculate flags using ALU
+          comb_alu_en = 1;
+          comb_alu_op = SP_ADJ;
+          comb_alu_src_a_select = ALU_SRC_A_REG;  // Z already read
+          comb_alu_src_b_select = ALU_SRC_B_RR_LOW;  // SPL on 16bit bus
+          comb_rf_flags_we = 1;  // F = 0,0,H,C
+
+        end else if (m_cycle == 2) begin
+          // M4: Stall
+          m_cycle_next = 3;
+          comb_bus_opcode_out = IDLE;
+          comb_rf_read_rr = 0;
+          comb_rf_write_rr = 0;
+          comb_idu_en = 0;
+        end else begin
+          // M5/M1: IF
+          m_cycle_next = 0;
+        end
+      end //.
+
+      // LD HL, SP + e8
+      else if (comb_decoded_opcode == 8'hF8) begin
+        if (m_cycle == 0) begin
+          // M2: Read e8 to Z
+          m_cycle_next = 1;
+          comb_bus_opcode_out = READ;
+          comb_rf_write_r = 1;
+          comb_rf_write_reg_r = Z;
+
+        end else if (m_cycle == 1) begin
+          // M3. IDU: HL = (SP + Z), ALU: SPL + Z for flags
+          m_cycle_next = 2;
+          comb_bus_opcode_out = IDLE;
+          // HL = SP + Z
+          comb_idu_en = 1;
+          comb_idu_op = IDU_ADD_S8;
+          comb_rf_read_rr = 1;
+          comb_rf_read_reg_rr = SP;
+          // Write result to HL
+          comb_rf_write_rr = 1;
+          comb_rf_write_reg_rr = HL;
+          // Get e8
+          comb_rf_read_r = 1;
+          comb_rf_read_reg_r = Z;
+          // Calculate result using ALU
+          comb_alu_en = 1;
+          comb_alu_op = SP_ADJ;
+          comb_alu_src_a_select = ALU_SRC_A_REG;  // Z already read
+          comb_alu_src_b_select = ALU_SRC_B_RR_LOW;  // SPL on 16bit bus
+          comb_rf_flags_we = 1;  // F = 0,0,H,C
+
+        end else begin
+          // M4/M1: IF
+          m_cycle_next = 0;
+        end
+      end //.
 
       // RLCA, RRCA, RLA, RRA, DAA, CPL, SCF, CCF
       else if (comb_decoded_opcode[7:6] == 2'b00 && comb_decoded_opcode[2:0] == 3'b111) begin

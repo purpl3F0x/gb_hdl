@@ -144,6 +144,8 @@ module cpu (
     case (alu_src_b_select)
       ALU_SRC_B_REG: alu_B = rf_data_out_r;
       ALU_SRC_B_ONE: alu_B = 8'h01;
+      ALU_SRC_B_RR_LOW: alu_B = rf_data_out_rr[7:0];
+      // ALU_SRC_B_RR_HIGH: alu_B = rf_data_out_rr[15:8];
       default;
     endcase
 

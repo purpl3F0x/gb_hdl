@@ -161,6 +161,87 @@ async def test_ld_sp_hl(dut):
     assert actual == 0xBEEF, f"LD SP, HL failed: expected 0xBEEF, got {hex(actual)}"
 
 
+async def _run_add_sp_e8_case(
+    dut, sp_start: int, imm8: int, expected_sp: int, expected_f: int
+):
+    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
+    mem = CPUMemory(dut, [0xE8, imm8, 0x00])
+    await reset_cpu(dut)
+
+    dut.reg_file.SP_reg.value = sp_start
+    dut.reg_file.AF_reg.value = 0x00F0  # ensure flags are overwritten
+
+    await do_cycles(dut, 3)
+
+    actual_sp = dut.reg_file.SP_reg.value.to_unsigned()
+    actual_f = (dut.reg_file.AF_reg.value.to_unsigned() >> 4) & 0x0F
+    assert (
+        actual_sp == expected_sp
+    ), f"ADD SP,e8 failed: expected SP={hex(expected_sp)}, got {hex(actual_sp)}"
+    assert (
+        actual_f == expected_f
+    ), f"ADD SP,e8 failed: expected F={hex(expected_f)}, got {hex(actual_f)}"
+
+
+@cocotb.test()
+async def test_add_sp_e8_positive_flags(dut):
+    # 0x1234 + 0x05 = 0x1239, flags: Z=0 N=0 H=0 C=0 => F=0x0
+    await _run_add_sp_e8_case(dut, 0x1234, 0x05, 0x1239, 0x0)
+
+
+@cocotb.test()
+async def test_add_sp_e8_negative_flags(dut):
+    # 0x1234 + (-2) = 0x1232, low-byte add 0x34 + 0xFE sets H and C
+    # flags: Z=0 N=0 H=1 C=1 => F=0x3
+    await _run_add_sp_e8_case(dut, 0x1234, 0xFE, 0x1232, 0x3)
+
+
+async def _run_ld_hl_sp_e8_case(
+    dut,
+    sp_start: int,
+    imm8: int,
+    expected_hl: int,
+    expected_sp: int,
+    expected_f: int,
+):
+    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
+    mem = CPUMemory(dut, [0xF8, imm8, 0x00])
+    await reset_cpu(dut)
+
+    dut.reg_file.SP_reg.value = sp_start
+    dut.reg_file.HL_reg.value = 0x0000
+    dut.reg_file.AF_reg.value = 0x00F0  # ensure flags are overwritten
+
+    await do_cycles(dut, 3)
+
+    actual_hl = dut.reg_file.HL_reg.value.to_unsigned()
+    actual_sp = dut.reg_file.SP_reg.value.to_unsigned()
+    actual_f = (dut.reg_file.AF_reg.value.to_unsigned() >> 4) & 0x0F
+
+    assert (
+        actual_hl == expected_hl
+    ), f"LD HL,SP+e8 failed: expected HL={hex(expected_hl)}, got {hex(actual_hl)}"
+    assert (
+        actual_sp == expected_sp
+    ), f"LD HL,SP+e8 failed: expected SP={hex(expected_sp)}, got {hex(actual_sp)}"
+    assert (
+        actual_f == expected_f
+    ), f"LD HL,SP+e8 failed: expected F={hex(expected_f)}, got {hex(actual_f)}"
+
+
+@cocotb.test()
+async def test_ld_hl_sp_e8_positive_flags(dut):
+    # 0x1234 + 0x05 = 0x1239, SP unchanged, flags: Z=0 N=0 H=0 C=0 => F=0x0
+    await _run_ld_hl_sp_e8_case(dut, 0x1234, 0x05, 0x1239, 0x1234, 0x0)
+
+
+@cocotb.test()
+async def test_ld_hl_sp_e8_negative_flags(dut):
+    # 0x1234 + (-2) = 0x1232, SP unchanged, low-byte add sets H and C
+    # flags: Z=0 N=0 H=1 C=1 => F=0x3
+    await _run_ld_hl_sp_e8_case(dut, 0x1234, 0xFE, 0x1232, 0x1234, 0x3)
+
+
 @cocotb.test()
 async def test_rlca_carry_0(dut):
     cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
@@ -975,6 +1056,115 @@ async def test_jp_hl(dut):
     assert (
         dut.opcode.value.to_unsigned() == 0x80
     ), f"JP HL failed: expected opcode to still be 0x80 during execution"
+
+
+@cocotb.test()
+async def test_call_a16(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
+    mem = CPUMemory(dut, [0xCD, 0x34, 0x12, 0x00])
+    await reset_cpu(dut)
+
+    dut.reg_file.SP_reg.value = 0xBFFE
+
+    await do_cycles(dut, 5)  # 6 cycles but check before IF
+
+    actual_pc = dut.reg_file.PC_reg.value.to_unsigned()
+    actual_sp = dut.reg_file.SP_reg.value.to_unsigned()
+    stacked_pcl = mem.data.get(0xBFFC, 0)
+    stacked_pch = mem.data.get(0xBFFD, 0)
+
+    assert (
+        actual_pc == 0x1234
+    ), f"CALL a16 failed: expected PC=0x1234, got {hex(actual_pc)}"
+    assert (
+        actual_sp == 0xBFFC
+    ), f"CALL a16 failed: expected SP=0xBFFC, got {hex(actual_sp)}"
+    assert (
+        stacked_pcl == 0x03
+    ), f"CALL a16 failed: expected stacked PCL=0x03, got {hex(stacked_pcl)}"
+    assert (
+        stacked_pch == 0x00
+    ), f"CALL a16 failed: expected stacked PCH=0x00, got {hex(stacked_pch)}"
+
+
+async def _run_call_cc_nn_case(
+    dut,
+    opcode: int,
+    flags: int,
+    should_call: bool,
+    name: str,
+):
+    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
+    mem = CPUMemory(dut, [opcode, 0x34, 0x12, 0x00], data={0xBFFC: 0xAA, 0xBFFD: 0xBB})
+    await reset_cpu(dut)
+
+    dut.reg_file.AF_reg.value = flags
+    dut.reg_file.SP_reg.value = 0xBFFE
+
+    await do_cycles(dut, 5 if should_call else 2)
+
+    expected_pc = 0x1234 if should_call else 0x0003
+    expected_sp = 0xBFFC if should_call else 0xBFFE
+    expected_pcl = 0x03 if should_call else 0xAA
+    expected_pch = 0x00 if should_call else 0xBB
+
+    actual_pc = dut.reg_file.PC_reg.value.to_unsigned()
+    actual_sp = dut.reg_file.SP_reg.value.to_unsigned()
+    stacked_pcl = mem.data.get(0xBFFC, 0)
+    stacked_pch = mem.data.get(0xBFFD, 0)
+
+    assert (
+        actual_pc == expected_pc
+    ), f"CALL {name},nn failed: expected PC={hex(expected_pc)}, got {hex(actual_pc)}"
+    assert (
+        actual_sp == expected_sp
+    ), f"CALL {name},nn failed: expected SP={hex(expected_sp)}, got {hex(actual_sp)}"
+    assert (
+        stacked_pcl == expected_pcl
+    ), f"CALL {name},nn failed: expected [0xBFFC]={hex(expected_pcl)}, got {hex(stacked_pcl)}"
+    assert (
+        stacked_pch == expected_pch
+    ), f"CALL {name},nn failed: expected [0xBFFD]={hex(expected_pch)}, got {hex(stacked_pch)}"
+
+
+@cocotb.test()
+async def test_call_nz_nn_taken(dut):
+    await _run_call_cc_nn_case(dut, 0xC4, 0x0000, True, "NZ")
+
+
+@cocotb.test()
+async def test_call_nz_nn_not_taken(dut):
+    await _run_call_cc_nn_case(dut, 0xC4, 0x0080, False, "NZ")
+
+
+@cocotb.test()
+async def test_call_z_nn_taken(dut):
+    await _run_call_cc_nn_case(dut, 0xCC, 0x0080, True, "Z")
+
+
+@cocotb.test()
+async def test_call_z_nn_not_taken(dut):
+    await _run_call_cc_nn_case(dut, 0xCC, 0x0000, False, "Z")
+
+
+@cocotb.test()
+async def test_call_nc_nn_taken(dut):
+    await _run_call_cc_nn_case(dut, 0xD4, 0x0080, True, "NC")
+
+
+@cocotb.test()
+async def test_call_nc_nn_not_taken(dut):
+    await _run_call_cc_nn_case(dut, 0xD4, 0x0090, False, "NC")
+
+
+@cocotb.test()
+async def test_call_c_nn_taken(dut):
+    await _run_call_cc_nn_case(dut, 0xDC, 0x0090, True, "C")
+
+
+@cocotb.test()
+async def test_call_c_nn_not_taken(dut):
+    await _run_call_cc_nn_case(dut, 0xDC, 0x0000, False, "C")
 
 
 @cocotb.test()
