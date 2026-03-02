@@ -33,7 +33,7 @@ module simple_cpu_sim();
       #5 clk = ~clk;
   end
 
-    reg [7:0] mem [65536];
+    reg [7:0] mem [4800]; // This is intentionally smaller than 64KB to speed up iverilog
 
     initial begin
     integer i;
@@ -41,10 +41,12 @@ module simple_cpu_sim();
       mem[i] = 0;
     end
 
-    mem[0] = 8'h71;
-    // mem[1] = 8'h02;
+    mem[0] = 8'hCB;
+    mem[1] = 8'hA0;
+//    mem[2] = 8'h12;
 
-    mem[16'h1234] = 8'h12;
+
+    mem[16'h1234] = 8'h44;
   end
 
 
@@ -58,12 +60,14 @@ module simple_cpu_sim();
     #20;
     rst = 0;
     uut.reg_file.HL_reg = 16'h1234;
-    uut.reg_file.BC_reg = 16'h1234;
+    uut.reg_file.BC_reg = 16'h0000;
     uut.reg_file.AF_reg = 16'h1100;
+    uut.reg_file.SP_reg = 16'h1234;
+
 
     #10;
 
-    #40 $finish;
+    #80 $finish;
   end
 
 

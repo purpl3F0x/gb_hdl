@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -10,20 +11,20 @@ def test_cpu(testcase_args=None):
     proj_path = Path(__file__).resolve().parent.parent
 
     sources = [
-        proj_path / "alu_pkg.sv",
-        proj_path / "cpu_pkg.sv",
-        proj_path / "alu.sv",
-        proj_path / "control.sv",
-        proj_path / "idu.sv",
-        proj_path / "register_file.sv",
-        proj_path / "cpu.sv",
+        proj_path / "rtl" / "alu_pkg.sv",
+        proj_path / "rtl" / "cpu_pkg.sv",
+        proj_path / "rtl" / "alu.sv",
+        proj_path / "rtl" / "control.sv",
+        proj_path / "rtl" / "idu.sv",
+        proj_path / "rtl" / "register_file.sv",
+        proj_path / "rtl" / "cpu.sv",
     ]
 
     runner = get_runner(sim)
     runner.build(
         sources=sources,
         hdl_toplevel="cpu",
-        always=True,
+        always=False,
         waves=False,
         build_args=["-g2012", "-Wall"],
     )
@@ -57,12 +58,9 @@ def test_cpu(testcase_args=None):
                 else:
                     # If no match but not a wildcard, add it anyway (might be exact)
                     testcases.append(sub_pattern)
-
+    print("all_test_modules:", all_test_modules)
     runner.test(hdl_toplevel="cpu", test_module=all_test_modules, testcase=testcases)
 
 
 if __name__ == "__main__":
-    import os
-
-    test_cpu(sys.argv[1:])
     test_cpu(sys.argv[1:])
