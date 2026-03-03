@@ -34,16 +34,26 @@ module ALU (
       case (op)
         ADD, ADC, SUB, SBC, CP, SP_ADJ: begin
           logic [7:0] B_eff;
+          logic cin;
           logic h_c, c_c;
 
           B_eff = op[1] ? ~B : B;
-          {h_c, res[3:0]} = add4(A[3:0], B_eff[3:0], (op[0] & flags_in.C) ^ op[1]);
+
+          case (op)
+            ADC: cin = flags_in.C;
+            SUB, CP: cin = 1'b1;
+            SBC: cin = ~flags_in.C;
+            default: cin = 1'b0;
+          endcase
+
+          {h_c, res[3:0]} = add4(A[3:0], B_eff[3:0], cin);
           {c_c, res[7:4]} = add4(A[7:4], B_eff[7:4], h_c);
 
           flags_out.N = op[1];
           flags_out.H = h_c ^ op[1];
           flags_out.C = c_c ^ op[1];
           flags_out.Z = ((res == 0) && !(op == SP_ADJ));
+
           if (op == CP || op == SP_ADJ) res = 0;
         end
 

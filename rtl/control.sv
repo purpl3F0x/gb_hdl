@@ -146,6 +146,7 @@ module control (
       // STOP
       else if (comb_decoded_opcode == 8'h10) begin
         // TODO: Not used on real games, except for switchin to GBC mode.
+        comb_halt = 1;
       end //.
 
       // DI / EI
@@ -345,6 +346,7 @@ module control (
           comb_bus_opcode_out = READ;
           comb_rf_write_r = 1;
           comb_rf_write_reg_r = Z;
+
         end else if (m_cycle == 1) begin
           // M3: W = MSB
           m_cycle_next = 2;
@@ -448,6 +450,7 @@ module control (
           comb_rf_read_reg_rr = register_nn_t'(comb_decoded_opcode[5:4]);
           comb_rf_write_rr = 1;
           comb_rf_write_reg_rr = register_nn_t'(comb_decoded_opcode[5:4]);
+          comb_rf_flags_we = 1;
         end else begin
           // M3/M1: IF
           comb_bus_opcode_out = IF;
@@ -464,7 +467,7 @@ module control (
           comb_rf_write_rr = 0;
 
           if (m_cycle == 0) begin
-            // M1: READ
+            // M2: READ
             m_cycle_next = 1;
             comb_bus_opcode_out = READ;
             comb_rf_read_rr = 1;
@@ -473,7 +476,7 @@ module control (
             comb_rf_write_reg_r = Z;
 
           end else if (m_cycle == 1) begin
-            // M2: ALU + WRITE_BACK
+            // M3: ALU + WRITE_BACK
             m_cycle_next = 2;
 
             comb_bus_opcode_out = WRITE;
@@ -487,6 +490,8 @@ module control (
             comb_alu_src_a_select = ALU_SRC_A_REG;
             comb_alu_src_b_select = ALU_SRC_B_ONE;
             comb_alu_op = alu_op_t'(comb_decoded_opcode[0] == 3'b000 ? ADD : SUB);
+            comb_rf_flags_we = 1;
+            comb_rf_flag_mask_n.C = 1;  // don't change carry flag
 
           end else if (m_cycle == 2) begin
             // M4/M1: IF
@@ -814,6 +819,7 @@ module control (
           comb_data_out_ctrl = DOUT_FROM_REG_FILE;
           // Don't increment PC
           comb_idu_en = 0;
+          comb_rf_write_rr = 0;
           // ADDR = 0xFF00 + Z
           comb_rf_read_rr = 1;
           comb_rf_read_reg_rr = LDH_Z;
@@ -834,6 +840,7 @@ module control (
           comb_data_out_ctrl = DOUT_FROM_REG_FILE;
           // Don't increment PC
           comb_idu_en = 0;
+          comb_rf_write_rr = 0;
           // ADDR = 0xFF00 + C
           comb_rf_read_rr = 1;
           comb_rf_read_reg_rr = LDH_C;
@@ -860,6 +867,9 @@ module control (
           // ADDR = 0xFF00 + Z
           comb_rf_read_rr = 1;
           comb_rf_read_reg_rr = LDH_Z;
+          // Don't increment PC
+          comb_idu_en = 0;
+          comb_rf_write_rr = 0;
         end else begin
           // M4/M1: IF
           m_cycle_next = 0;
@@ -877,6 +887,9 @@ module control (
           // ADDR = 0xFF00 + C
           comb_rf_read_rr = 1;
           comb_rf_read_reg_rr = LDH_C;
+          // Don't increment PC
+          comb_idu_en = 0;
+          comb_rf_write_rr = 0;
         end else begin
           // M3/M1: IF
           m_cycle_next = 0;
@@ -906,6 +919,7 @@ module control (
           comb_data_out_ctrl = DOUT_FROM_REG_FILE;
           // Don't increment PC
           comb_idu_en = 0;
+          comb_rf_write_rr = 0;
           // ADDR = WZ
           comb_rf_read_rr = 1;
           comb_rf_read_reg_rr = WZ;
@@ -938,6 +952,9 @@ module control (
           // ADDR = WZ
           comb_rf_read_rr = 1;
           comb_rf_read_reg_rr = WZ;
+          // Don't increment PC
+          comb_idu_en = 0;
+          comb_rf_write_rr = 0;
         end else begin
           // M5/M1: IF
           m_cycle_next = 0;
@@ -1220,6 +1237,9 @@ module control (
       // JP HL
       else if (comb_decoded_opcode == 8'hE9) begin
         // Fetch form HL, and PC = HL + 1
+        comb_bus_opcode_out = IF;
+        comb_idu_en = 1;
+        comb_idu_op = IDU_INC;
         comb_rf_read_rr = 1;
         comb_rf_read_reg_rr = HL;
         comb_rf_write_rr = 1;
@@ -1449,9 +1469,9 @@ module control (
       else if (comb_decoded_opcode[7:6] == 2'b00 && comb_decoded_opcode[2:0] == 3'b111) begin
         comb_alu_en = 1;
         comb_alu_op = alu_op_t'({2'b10, comb_decoded_opcode[5:3]});
-        comb_rf_read_r = (comb_decoded_opcode[4:3] < 5);  // CPL, SCF, CCF don't neet A reg;
+        comb_rf_read_r = (comb_decoded_opcode[5:3] <= 5);  // CPL, SCF, CCF don't neet A reg;
         comb_rf_read_reg_r = A;
-        comb_rf_write_r = (comb_decoded_opcode[4:3] < 5);  // CPL, SCF, CCF don't neet A reg;
+        comb_rf_write_r = (comb_decoded_opcode[5:3] <= 5);  // CPL, SCF, CCF don't neet A reg;
         comb_rf_write_reg_r = A;
         comb_rf_flags_we = 1;
       end //.
@@ -1482,8 +1502,9 @@ module control (
                 comb_rf_write_reg_r = Z;
                 comb_rf_write_r = 1;
 
-              end else if (m_cycle == 2) begin  // M3: ALU OP + WB
-                m_cycle_next = 0;
+              end else if (m_cycle == 2) begin
+                // M3: ALU OP + WB
+                m_cycle_next = 3;
                 // Do the ALU operation
                 comb_alu_src_b_select = ALU_SRC_B_REG;
                 comb_alu_en = 1;
@@ -1497,6 +1518,9 @@ module control (
                 comb_rf_read_rr = 1;
                 comb_rf_read_reg_rr = HL;
                 comb_data_out_ctrl = DOUT_FROM_ALU_RES;
+                // Don't touch PC
+                comb_idu_en = 0;
+                comb_rf_write_rr = 0;
               end else begin
                 // M4/M1: IF
                 m_cycle_next = 0;
@@ -1585,7 +1609,7 @@ module control (
                 comb_rf_write_r = 1;
 
               end else if (m_cycle == 2) begin  // M3: ALU OP + WB
-                m_cycle_next = 0;
+                m_cycle_next = 3;
                 // Do the ALU operation
                 comb_alu_src_b_select = ALU_SRC_B_REG;
                 comb_alu_en = 1;
@@ -1598,6 +1622,9 @@ module control (
                 comb_rf_read_rr = 1;
                 comb_rf_read_reg_rr = HL;
                 comb_data_out_ctrl = DOUT_FROM_ALU_RES;
+                // Don't touch PC
+                comb_idu_en = 0;
+                comb_rf_write_rr = 0;
               end else begin
                 // M4/M1: IF
                 m_cycle_next = 0;
@@ -1647,33 +1674,33 @@ module control (
   end
 
 
-  always @(*) begin
-    decoded_opcode <= comb_decoded_opcode;
-    bus_opcode_out <= comb_bus_opcode_out;
+  always_comb begin
+    decoded_opcode = comb_decoded_opcode;
+    bus_opcode_out = comb_bus_opcode_out;
 
-    idu_op <= comb_idu_op;
-    idu_en <= comb_idu_en;
+    idu_op = comb_idu_op;
+    idu_en = comb_idu_en;
 
-    rf_read_r <= comb_rf_read_r;
-    rf_read_reg_r <= comb_rf_read_reg_r;
-    rf_read_rr <= comb_rf_read_rr;
-    rf_read_reg_rr <= comb_rf_read_reg_rr;
-    rf_write_r <= comb_rf_write_r;
-    rf_write_reg_r <= comb_rf_write_reg_r;
-    rf_write_rr <= comb_rf_write_rr;
-    rf_write_reg_rr <= comb_rf_write_reg_rr;
-    rf_copy_wz_to_rr_op <= comb_rf_copy_wz_to_rr_op;
-    rf_copy_wz_to_rr_en <= comb_rf_copy_wz_to_rr_en;
-    rf_pc_rst <= comb_rf_pc_rst;
-    rf_flags_we <= comb_rf_flags_we;
-    rf_flag_mask_n <= comb_rf_flag_mask_n;
+    rf_read_r = comb_rf_read_r;
+    rf_read_reg_r = comb_rf_read_reg_r;
+    rf_read_rr = comb_rf_read_rr;
+    rf_read_reg_rr = comb_rf_read_reg_rr;
+    rf_write_r = comb_rf_write_r;
+    rf_write_reg_r = comb_rf_write_reg_r;
+    rf_write_rr = comb_rf_write_rr;
+    rf_write_reg_rr = comb_rf_write_reg_rr;
+    rf_copy_wz_to_rr_op = comb_rf_copy_wz_to_rr_op;
+    rf_copy_wz_to_rr_en = comb_rf_copy_wz_to_rr_en;
+    rf_pc_rst = comb_rf_pc_rst;
+    rf_flags_we = comb_rf_flags_we;
+    rf_flag_mask_n = comb_rf_flag_mask_n;
 
-    alu_en <= comb_alu_en;
-    alu_op <= comb_alu_op;
-    alu_src_a_select <= comb_alu_src_a_select;
-    alu_src_b_select <= comb_alu_src_b_select;
+    alu_en = comb_alu_en;
+    alu_op = comb_alu_op;
+    alu_src_a_select = comb_alu_src_a_select;
+    alu_src_b_select = comb_alu_src_b_select;
 
-    data_out_ctrl <= comb_data_out_ctrl;
+    data_out_ctrl = comb_data_out_ctrl;
   end
 
 endmodule

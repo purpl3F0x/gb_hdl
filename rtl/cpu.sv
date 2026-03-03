@@ -14,6 +14,10 @@ module cpu (
     output wire [15:0] addr_out,
     output wire [7:0] data_out
 );
+  // debugging code
+`ifndef SYNTHESIS
+  reg [15:0] executing_pc;
+`endif
 
   reg [7:0] opcode;
   reg [7:0] cb_opcode;
@@ -184,6 +188,9 @@ module cpu (
       counter <= 0;
       opcode <= 8'h00;
       cb_opcode <= 8'h00;
+`ifndef SYNTHESIS
+      executing_pc = 0;
+`endif
     end else begin
 
       if (!locked) counter <= counter + 1;
@@ -191,6 +198,9 @@ module cpu (
       case (bus_op)
         IF: begin
           opcode <= data_in[7:0];
+`ifndef SYNTHESIS
+          executing_pc = addr_out;
+`endif
         end
 
         WRITE: begin
