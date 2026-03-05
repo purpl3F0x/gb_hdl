@@ -85,7 +85,7 @@ module control (
   always_comb begin
     comb_ime = ime;
     comb_halt = halt;
-    comb_locked = comb_locked;
+    comb_locked = locked;
     comb_decoded_opcode = 8'h00;
     comb_bus_opcode_out = IDLE;
     comb_idu_op = IDU_INC;

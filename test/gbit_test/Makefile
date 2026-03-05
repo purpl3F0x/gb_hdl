@@ -23,7 +23,7 @@ VERILATOR_FLAGS += --build -j
 
 # Top module and RTL inputs
 TOP_MODULE = cpu_verilator_bridge
-RTL_DIR = ../../rtl
+RTL_DIR = ../../rtl/cpu
 VERILATOR_FLAGS += --top-module $(TOP_MODULE)
 RTL_SRCS = $(RTL_DIR)/alu_pkg.sv \
 		   $(RTL_DIR)/cpu_pkg.sv \

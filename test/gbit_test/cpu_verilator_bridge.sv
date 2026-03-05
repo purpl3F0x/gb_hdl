@@ -22,14 +22,18 @@ module cpu_verilator_bridge (
     output logic [7:0] data_out
 );
 
+  bus_if cpu_bus ();
+
+  assign cpu_bus.din = data_in;
+  assign rd_en = cpu_bus.re;
+  assign wr_en = cpu_bus.we;
+  assign addr_out = cpu_bus.addr;
+  assign data_out = cpu_bus.dout;
+
   cpu uut (
       .clk(clk),
       .rst(rst),
-      .data_in(data_in),
-      .rd_en(rd_en),
-      .wr_en(wr_en),
-      .addr_out(addr_out),
-      .data_out(data_out)
+      .cpu_bus(cpu_bus.master)
   );
 
   always_comb begin

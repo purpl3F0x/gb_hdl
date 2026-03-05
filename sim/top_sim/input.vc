@@ -1,0 +1,4 @@
+// Verilator include scan hints
++librescan +libext+.v+.sv+.vh+.svh -y .
++incdir+../../rtl
++incdir+../../rtl/cpu

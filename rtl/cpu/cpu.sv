@@ -2,17 +2,13 @@
 
 import alu_pkg::*;
 import cpu_pkg::*;
+import boy_pkg::*;
 
 module cpu (
     input logic clk,
     input logic rst,
 
-    input logic [7:0] data_in,
-
-    output wire rd_en,
-    output wire wr_en,
-    output wire [15:0] addr_out,
-    output wire [7:0] data_out
+    bus_if.master cpu_bus
 );
   // debugging code
 `ifndef SYNTHESIS
@@ -170,13 +166,13 @@ module cpu (
       .res(alu_res)
   );
   // Might not be always correct
-  assign rf_data_in_r = alu_en ? alu_res : data_in;
+  assign rf_data_in_r = alu_en ? alu_res : cpu_bus.din;
 
   // BUS operations
-  assign rd_en = (bus_op == IF) || (bus_op == READ) || (bus_op == IF_CB);
-  assign wr_en = (bus_op == WRITE);
-  assign addr_out = (bus_op == IF || bus_op == READ || bus_op == WRITE || bus_op == IF_CB) ? rf_data_out_rr : 16'h0;
-  assign data_out = (bus_op == WRITE) ?
+  assign cpu_bus.re = (bus_op == IF) || (bus_op == READ) || (bus_op == IF_CB);
+  assign cpu_bus.we = (bus_op == WRITE);
+  assign cpu_bus.addr = (bus_op == IF || bus_op == READ || bus_op == WRITE || bus_op == IF_CB) ? rf_data_out_rr : 16'h0;
+  assign cpu_bus.dout = (bus_op == WRITE) ?
                     ((data_out_ctrl == DOUT_FROM_ALU_RES) ? alu_res : rf_data_out_r)
                     : 8'h00; // TODO: This can probably be merged to checking if ALU is enabled
 
@@ -197,9 +193,9 @@ module cpu (
 
       case (bus_op)
         IF: begin
-          opcode <= data_in[7:0];
+          opcode <= cpu_bus.din[7:0];
 `ifndef SYNTHESIS
-          executing_pc = addr_out;
+          executing_pc = cpu_bus.addr;
 `endif
         end
 
@@ -210,7 +206,7 @@ module cpu (
         end
 
         IF_CB: begin
-          cb_opcode <= data_in[7:0];
+          cb_opcode <= cpu_bus.din[7:0];
         end
 
         default;

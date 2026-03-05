@@ -8,16 +8,16 @@ from cocotb_tools.runner import get_runner
 def test_cpu(testcase_args=None):
     sim = os.getenv("SIM", "icarus")
 
-    proj_path = Path(__file__).resolve().parent.parent
+    proj_path = Path(__file__).resolve().parent.parent.parent
 
     sources = [
-        proj_path / "rtl" / "alu_pkg.sv",
+        proj_path / "rtl" / "cpu" / "alu_pkg.sv",
         proj_path / "rtl" / "cpu_pkg.sv",
-        proj_path / "rtl" / "alu.sv",
-        proj_path / "rtl" / "control.sv",
-        proj_path / "rtl" / "idu.sv",
-        proj_path / "rtl" / "register_file.sv",
-        proj_path / "rtl" / "cpu.sv",
+        proj_path / "rtl" / "cpu" / "alu.sv",
+        proj_path / "rtl" / "cpu" / "control.sv",
+        proj_path / "rtl" / "cpu" / "idu.sv",
+        proj_path / "rtl" / "cpu" / "register_file.sv",
+        proj_path / "rtl" / "cpu" / "cpu.sv",
     ]
 
     runner = get_runner(sim)
