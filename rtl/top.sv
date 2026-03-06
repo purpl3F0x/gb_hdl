@@ -12,8 +12,10 @@ module top (
   bus_if apu_bus ();  // Output to APU
   bus_if #(.ADDR_WIDTH(13)) ram_bus ();  // Output to RAM (8 KiB = 13 bits)
   bus_if oam_bus ();  // Output to OAM
-  bus_if io_bus ();  // Output to I/O Devices
   bus_if #(.ADDR_WIDTH(7)) hram_bus ();  // Output to High RAM    HRAM 127 byts = 7 bits
+
+  bus_if #(.ADDR_WIDTH(2)) timer_bus ();  // Output to Timer (4 registers = 2 bits)
+
   bus_if cpu_bus ();  // Input from CPU
 
   // DMA signals
@@ -33,9 +35,11 @@ module top (
       .apu_bus(apu_bus),
       .ram_bus(ram_bus),
       .oam_bus(oam_bus),
-      .io_bus(io_bus),
       .cart_bus(cart_bus),
       .hram_bus(hram_bus),
+
+      .timer_bus(timer_bus),
+
       .cpu_bus(cpu_bus),
 
       // DMA
@@ -80,6 +84,17 @@ module top (
       .dout(dma_din),
       .dma_src_high(dma_src_high),
       .dma_active(dma_active)
+  );
+
+  // Instantiate Timer
+  timer Timer (
+      .clk_4(clk),  // TODO: Generate 4 MHz clock from main clock
+      .clk(clk),
+      .rst(rst),
+      .stop(1'b0),  // TODO: Connect to CPU STOP mode
+      .timer_bus(timer_bus.slave),  // Connect Timer to I/O bus
+      .timer_irq(),  // TODO: Connect to CPU interrupt line
+      .timer_irq_ack()  // TODO: Connect to CPU interrupt ack
   );
 
 

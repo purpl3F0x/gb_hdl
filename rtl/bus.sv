@@ -13,8 +13,9 @@ module bus (
     bus_if.master apu_bus,  // Output to APU
     bus_if.master ram_bus,  // Output to RAM
     bus_if.master oam_bus,  // Output to OAM
-    bus_if.master io_bus,   // Output to I/O Devices
     bus_if.master hram_bus, // Output to High RAM
+
+    bus_if.master timer_bus,
 
     bus_if.slave cpu_bus,  // Input from CPU
 
@@ -50,42 +51,42 @@ module bus (
   // TODO: Verilator gets confused on this statement it needs to be split into two
   always_comb begin
     // Default values for all buses
-    cpu_bus.din   = 8'h00;
+    cpu_bus.din = 8'h00;
 
     ppu_bus.addr = 16'h0000;
     ppu_bus.dout = 8'h00;
-    ppu_bus.we   = 1'b0;
-    ppu_bus.re   = 1'b0;
+    ppu_bus.we = 1'b0;
+    ppu_bus.re = 1'b0;
 
     apu_bus.addr = 16'h0000;
     apu_bus.dout = 8'h00;
-    apu_bus.we   = 1'b0;
-    apu_bus.re   = 1'b0;
+    apu_bus.we = 1'b0;
+    apu_bus.re = 1'b0;
 
     ram_bus.addr = 13'h0000;
     ram_bus.dout = 8'h00;
-    ram_bus.we   = 1'b0;
-    ram_bus.re   = 1'b0;
+    ram_bus.we = 1'b0;
+    ram_bus.re = 1'b0;
 
     oam_bus.addr = 16'h0000;
     oam_bus.dout = 8'h00;
-    oam_bus.we   = 1'b0;
-    oam_bus.re   = 1'b0;
-
-    io_bus.addr  = 16'h0000;
-    io_bus.dout  = 8'h00;
-    io_bus.we    = 1'b0;
-    io_bus.re    = 1'b0;
+    oam_bus.we = 1'b0;
+    oam_bus.re = 1'b0;
 
     cart_bus.addr = 16'h0000;
     cart_bus.dout = 8'h00;
-    cart_bus.we   = 1'b0;
-    cart_bus.re   = 1'b0;
+    cart_bus.we = 1'b0;
+    cart_bus.re = 1'b0;
 
     hram_bus.addr = 7'h00;
     hram_bus.dout = 8'h00;
-    hram_bus.we   = 1'b0;
-    hram_bus.re   = 1'b0;
+    hram_bus.we = 1'b0;
+    hram_bus.re = 1'b0;
+
+    timer_bus.addr = 2'b00;
+    timer_bus.dout = 8'h00;
+    timer_bus.we = 1'b0;
+    timer_bus.re = 1'b0;
 
 
     // Address decoding logic
@@ -159,18 +160,6 @@ module bus (
         cpu_bus.din  = oam_bus.din;
       end
 
-      // I/O Registers (FF00h – FF7Fh) // TODO: Maybe will be seperated
-      16'b1111_1111_0???_????: begin
-        if (cpu_bus.addr == 16'hFF44) begin
-          cpu_bus.din = 8'h90;  // LY register always returns 0x90 for now
-        end else begin
-          io_bus.addr = cpu_bus.addr;
-          io_bus.dout = cpu_bus.dout;
-          io_bus.we   = cpu_bus.we;
-          io_bus.re   = cpu_bus.re;
-          cpu_bus.din = io_bus.din;
-        end
-      end
 
       // High RAM (HRAM) (FF80h – FFFEh)
       [16'hFF80 : 16'hFFFE]: begin
@@ -179,6 +168,19 @@ module bus (
         hram_bus.we   = cpu_bus.we;
         hram_bus.re   = cpu_bus.re;
         cpu_bus.din   = hram_bus.din;
+      end
+
+      //
+      // IO Registers (FF00h – FF7Fh)
+      //
+
+      // Timer Registers (FF04h - FF07h)
+      16'b1111_1111_0000_01??: begin
+        timer_bus.addr = cpu_bus.addr[1:0];
+        timer_bus.dout = cpu_bus.dout;
+        timer_bus.we   = cpu_bus.we;
+        timer_bus.re   = cpu_bus.re;
+        cpu_bus.din    = timer_bus.din;
       end
 
       // IE Register
