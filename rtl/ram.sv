@@ -12,7 +12,13 @@ module ram #(
 
   reg [7:0] mem[SIZE];
 
-  assign ram_bus.din = (ram_bus.re) ? mem[ram_bus.addr] : 8'b0;
+  always @(negedge clk) begin
+    if (ram_bus.re) begin
+      ram_bus.din <= mem[ram_bus.addr];
+    end else begin
+      ram_bus.din <= 0;
+    end
+  end
 
   always @(posedge clk) begin
     if (ram_bus.we) begin

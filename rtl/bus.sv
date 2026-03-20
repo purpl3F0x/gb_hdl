@@ -16,6 +16,7 @@ module bus (
     bus_if.master hram_bus, // Output to High RAM
 
     bus_if.master timer_bus,
+    bus_if.master serial_bus,
 
     bus_if.slave cpu_bus,  // Input from CPU
 
@@ -31,11 +32,13 @@ module bus (
 );
 
   reg bootrom_mapped;
-  reg [7:0] bootrom[256];  // 256 bytes of Boot ROM
+  bus_if #(.ADDR_WIDTH(8)) bootrom_bus ();  // Boot ROM is 256 bytes
 
-  initial begin
-    $readmemh("roms/dmg_boot.hex", bootrom);
-  end
+  // BootROM instance
+  bootrom u_bootrom (
+      .clk(clk),
+      .rom_bus(bootrom_bus.slave)
+  );
 
   always @(posedge clk) begin
     if (rst) begin
@@ -83,10 +86,20 @@ module bus (
     hram_bus.we = 1'b0;
     hram_bus.re = 1'b0;
 
+    serial_bus.addr = 1'b0;
+    serial_bus.dout = 8'h00;
+    serial_bus.we = 1'b0;
+    serial_bus.re = 1'b0;
+
     timer_bus.addr = 2'b00;
     timer_bus.dout = 8'h00;
     timer_bus.we = 1'b0;
     timer_bus.re = 1'b0;
+
+    bootrom_bus.addr = 8'h00;
+    bootrom_bus.dout = 8'h00;
+    bootrom_bus.we = 1'b0;
+    bootrom_bus.re = 1'b0;
 
 
     // Address decoding logic
@@ -98,10 +111,9 @@ module bus (
 
         // if bootrom_is active and address is in bootrom range, access bootrom
         if (bootrom_mapped && (cpu_bus.addr[15:8] == 8'h00)) begin
-          // Boot ROM is mapped
-          if (cpu_bus.re) begin
-            cpu_bus.din = bootrom[cpu_bus.addr[7:0]];
-          end
+          bootrom_bus.addr = cpu_bus.addr[7:0];
+          bootrom_bus.re   = cpu_bus.re;
+          cpu_bus.din      = bootrom_bus.din;
 
         end else begin
           // Boot ROM is unmapped, access cartridge
@@ -173,6 +185,10 @@ module bus (
       //
       // IO Registers (FF00h – FF7Fh)
       //
+
+      // Serial Registers (FF01h-FF02h)
+      16'hFF01, 16'hFF02: begin
+      end
 
       // Timer Registers (FF04h - FF07h)
       16'b1111_1111_0000_01??: begin

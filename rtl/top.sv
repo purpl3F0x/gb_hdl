@@ -2,6 +2,7 @@
 
 module top (
     input logic clk,
+    input logic clk_4,
     input logic rst,
 
     bus_if.master cart_bus  // Output to Cartridge
@@ -14,6 +15,7 @@ module top (
   bus_if oam_bus ();  // Output to OAM
   bus_if #(.ADDR_WIDTH(7)) hram_bus ();  // Output to High RAM    HRAM 127 byts = 7 bits
 
+  bus_if #(.ADDR_WIDTH(1)) serial_bus ();  // Output to Serial (2 registers = 1 bit)
   bus_if #(.ADDR_WIDTH(2)) timer_bus ();  // Output to Timer (4 registers = 2 bits)
 
   bus_if cpu_bus ();  // Input from CPU
@@ -37,7 +39,7 @@ module top (
       .oam_bus(oam_bus),
       .cart_bus(cart_bus),
       .hram_bus(hram_bus),
-
+      .serial_bus(serial_bus),
       .timer_bus(timer_bus),
 
       .cpu_bus(cpu_bus),
@@ -86,9 +88,19 @@ module top (
       .dma_active(dma_active)
   );
 
+  // Instantiate Serial
+  serial Serial (
+      .clk(clk),
+      .clk_4(clk_4),
+      .rst(rst),
+      .serial_bus(serial_bus.slave),  // Connect Serial to I/O bus
+      .serial_irq(),  // TODO: Connect to CPU interrupt line
+      .serial_irq_ack()  // TODO: Connect to CPU interrupt ack
+  );
+
   // Instantiate Timer
   timer Timer (
-      .clk_4(clk),  // TODO: Generate 4 MHz clock from main clock
+      .clk_4(clk_4),
       .clk(clk),
       .rst(rst),
       .stop(1'b0),  // TODO: Connect to CPU STOP mode
